@@ -4,6 +4,13 @@ import yaml
 
 from uav_mpe.comparison import compare_configurations
 from uav_mpe.exporting import save_comparison_to_csv, save_sweep_to_csv
+from uav_mpe.mission import (
+    energy_margin_wh,
+    is_mission_feasible,
+    range_margin_km,
+    required_mission_energy_wh,
+    required_mission_time_hours,
+)
 from uav_mpe.models import Config
 from uav_mpe.performance import (
     air_power_required_watts,
@@ -79,13 +86,24 @@ def main() -> None:
     print(f"Wind-adjusted range [m]: {wind_adjusted_range_m(config):.3f}")
     print(f"Wind-adjusted range [km]: {wind_adjusted_range_km(config):.3f}")
 
+    if config.mission.required_distance_km is not None:
+        print()
+        print("Mission feasibility")
+        print("-" * 50)
+        print(f"Required mission distance [km]: {config.mission.required_distance_km:.3f}")
+        print(f"Required mission time [h]: {required_mission_time_hours(config):.3f}")
+        print(f"Required mission energy [Wh]: {required_mission_energy_wh(config):.3f}")
+        print(f"Available mission energy [Wh]: {battery_available_for_mission_wh(config):.3f}")
+        print(f"Range margin [km]: {range_margin_km(config):.3f}")
+        print(f"Energy margin [Wh]: {energy_margin_wh(config):.3f}")
+        print(f"Mission feasible [-]: {is_mission_feasible(config)}")
+
     print()
     print("Speed sweep summary")
     print("-" * 50)
 
     max_speed_m_per_s = 40.0
     num_points = 120
-
     diagnostic_min_speed_m_per_s = 8.0
 
     sweep_df = build_speed_sweep(
