@@ -25,6 +25,11 @@ from uav_mpe.performance import (
     wind_adjusted_range_km,
     wind_adjusted_range_m,
 )
+from uav_mpe.plotting import (
+    plot_endurance_vs_speed,
+    plot_power_vs_speed,
+    plot_range_vs_speed,
+)
 from uav_mpe.sweeps import (
     best_endurance_row,
     best_still_air_range_row,
@@ -100,35 +105,28 @@ def main() -> None:
     )
 
     print(f"Sweep points [-]: {len(sweep_df)}")
-    print(
-        f"Best endurance speed [m/s]: "
-        f"{best_endurance['airspeed_m_per_s']:.3f}"
-    )
-    print(
-        f"Maximum endurance [h]: "
-        f"{best_endurance['endurance_h']:.3f}"
-    )
-    print(
-        f"Best still-air range speed [m/s]: "
-        f"{best_still_air_range['airspeed_m_per_s']:.3f}"
-    )
-    print(
-        f"Maximum still-air range [km]: "
-        f"{best_still_air_range['still_air_range_km']:.3f}"
-    )
-    print(
-        f"Best wind-adjusted range speed [m/s]: "
-        f"{best_wind_range['airspeed_m_per_s']:.3f}"
-    )
-    print(
-        f"Maximum wind-adjusted range [km]: "
-        f"{best_wind_range['wind_adjusted_range_km']:.3f}"
-    )
+    print(f"Best endurance speed [m/s]: {best_endurance['airspeed_m_per_s']:.3f}")
+    print(f"Maximum endurance [h]: {best_endurance['endurance_h']:.3f}")
+    print(f"Best still-air range speed [m/s]: {best_still_air_range['airspeed_m_per_s']:.3f}")
+    print(f"Maximum still-air range [km]: {best_still_air_range['still_air_range_km']:.3f}")
+    print(f"Best wind-adjusted range speed [m/s]: {best_wind_range['airspeed_m_per_s']:.3f}")
+    print(f"Maximum wind-adjusted range [km]: {best_wind_range['wind_adjusted_range_km']:.3f}")
 
     print()
     print("First five sweep rows")
     print("-" * 50)
     print(sweep_df.head().to_string(index=False))
+
+    power_plot = plot_power_vs_speed(sweep_df, "outputs/power_vs_speed.png")
+    endurance_plot = plot_endurance_vs_speed(sweep_df, "outputs/endurance_vs_speed.png")
+    range_plot = plot_range_vs_speed(sweep_df, "outputs/range_vs_speed.png")
+
+    print()
+    print("Saved plots")
+    print("-" * 50)
+    print(power_plot)
+    print(endurance_plot)
+    print(range_plot)
 
 
 if __name__ == "__main__":
