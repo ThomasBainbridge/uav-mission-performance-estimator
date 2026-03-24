@@ -2,6 +2,8 @@ from math import pi, sqrt
 
 from uav_mpe.models import Config
 
+from uav_mpe.atmosphere import get_air_density_kg_per_m3
+
 
 def total_mass_kg(config: Config) -> float:
     aircraft = config.aircraft
@@ -33,7 +35,7 @@ def battery_available_for_mission_j(config: Config) -> float:
 
 def stall_speed_m_per_s(config: Config) -> float:
     w = weight_newtons(config)
-    rho = config.environment.air_density_kg_per_m3
+    rho = get_air_density_kg_per_m3(config)
     s = config.aircraft.wing_area_m2
     cl_max = config.aircraft.cl_max
 
@@ -49,7 +51,7 @@ def minimum_recommended_cruise_speed_m_per_s(
 
 def lift_coefficient(config: Config) -> float:
     w = weight_newtons(config)
-    rho = config.environment.air_density_kg_per_m3
+    rho = get_air_density_kg_per_m3(config)
     v = config.mission.cruise_speed_m_per_s
     s = config.aircraft.wing_area_m2
 
@@ -72,7 +74,7 @@ def drag_coefficient(config: Config) -> float:
 
 
 def drag_force_newtons(config: Config) -> float:
-    rho = config.environment.air_density_kg_per_m3
+    rho = get_air_density_kg_per_m3(config)
     v = config.mission.cruise_speed_m_per_s
     s = config.aircraft.wing_area_m2
     cd = drag_coefficient(config)

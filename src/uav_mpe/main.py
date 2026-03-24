@@ -71,6 +71,8 @@ from uav_mpe.mission_profile_plotting import (
     plot_remaining_energy_by_segment,
 )
 
+from uav_mpe.atmosphere import get_air_density_kg_per_m3
+
 
 def main() -> None:
     config = load_config("configs/example_fixed_wing.yaml")
@@ -323,6 +325,10 @@ def main() -> None:
     print("-" * 50)
     print(mission_energy_plot)
     print(remaining_energy_plot)
+
+    print(f"Resolved air density [kg/m^3]: {get_air_density_kg_per_m3(config):.4f}")
+    if config.environment.altitude_m is not None:
+        print(f"Altitude [m]: {config.environment.altitude_m:.1f}")
 
 
 
