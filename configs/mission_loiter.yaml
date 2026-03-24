@@ -1,0 +1,30 @@
+aircraft:
+  empty_mass_kg: 4.0
+  payload_mass_kg: 1.0
+  battery_mass_kg: 1.5
+  battery_specific_energy_wh_per_kg: 220.0
+  wing_area_m2: 0.8
+  aspect_ratio: 8.0
+  oswald_efficiency: 0.8
+  cd0: 0.03
+  cl_max: 1.4
+  eta_total: 0.7
+
+environment:
+  altitude_m: 0.0
+  wind_speed_m_per_s: 0.0
+  g_m_per_s2: 9.81
+
+mission:
+  usable_battery_fraction: 0.85
+  reserve_fraction: 0.10
+  cruise_speed_m_per_s: 20.0
+  required_distance_km: 80.0
+
+  profile:
+    outbound_distance_km: 15.0
+    loiter_duration_min: 40.0
+    return_distance_km: 15.0
+    outbound_wind_speed_m_per_s: 0.0
+    return_wind_speed_m_per_s: 0.0
+    cruise_mode: best_range
