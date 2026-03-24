@@ -1,0 +1,326 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pandas as pd
+import streamlit as st
+import yaml
+
+from uav_mpe.atmosphere import get_air_density_kg_per_m3
+from uav_mpe.comparison import compare_configurations
+from uav_mpe.mission import (
+    energy_margin_wh,
+    is_mission_feasible,
+    range_margin_km,
+    required_mission_energy_wh,
+    required_mission_time_hours,
+)
+from uav_mpe.mission_profile import evaluate_simple_mission_profile
+from uav_mpe.mission_scenario_comparison import compare_mission_scenarios
+from uav_mpe.models import Config
+from uav_mpe.operating_points import (
+    get_best_endurance_operating_point,
+    get_best_range_operating_point,
+    get_best_wind_adjusted_range_operating_point,
+)
+from uav_mpe.performance import (
+    air_power_required_watts,
+    battery_available_for_mission_wh,
+    battery_nominal_energy_wh,
+    battery_usable_energy_wh,
+    electrical_power_required_watts,
+    endurance_hours,
+    minimum_recommended_cruise_speed_m_per_s,
+    stall_speed_m_per_s,
+    still_air_range_km,
+    total_mass_kg,
+    weight_newtons,
+    wind_adjusted_range_km,
+)
+from uav_mpe.sweeps import build_speed_sweep
+
+
+CONFIG_DIR = Path("configs")
+MISSION_SCENARIO_FILES = [
+    "configs/mission_baseline.yaml",
+    "configs/mission_windy.yaml",
+    "configs/mission_loiter.yaml",
+]
+
+
+@st.cache_data
+def list_yaml_configs(config_dir: str) -> list[str]:
+    return sorted(str(path) for path in Path(config_dir).glob("*.yaml"))
+
+
+@st.cache_data
+def load_config_dict(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def load_config(path: str) -> Config:
+    data = load_config_dict(path)
+    return Config.model_validate(data)
+
+
+def make_performance_summary(config: Config) -> dict[str, float]:
+    return {
+        "total_mass_kg": total_mass_kg(config),
+        "weight_n": weight_newtons(config),
+        "resolved_air_density_kg_per_m3": get_air_density_kg_per_m3(config),
+        "stall_speed_m_per_s": stall_speed_m_per_s(config),
+        "minimum_recommended_cruise_speed_m_per_s": minimum_recommended_cruise_speed_m_per_s(config),
+        "battery_nominal_energy_wh": battery_nominal_energy_wh(config),
+        "battery_usable_energy_wh": battery_usable_energy_wh(config),
+        "battery_available_for_mission_wh": battery_available_for_mission_wh(config),
+        "electrical_power_required_w": electrical_power_required_watts(config),
+        "air_power_required_w": air_power_required_watts(config),
+        "endurance_h": endurance_hours(config),
+        "still_air_range_km": still_air_range_km(config),
+        "wind_adjusted_range_km": wind_adjusted_range_km(config),
+    }
+
+
+def make_operating_points_summary(config: Config) -> pd.DataFrame:
+    best_endurance = get_best_endurance_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+    best_range = get_best_range_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+    best_wind = get_best_wind_adjusted_range_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+
+    rows = [
+        {"operating_point": "best_endurance", **best_endurance},
+        {"operating_point": "best_still_air_range", **best_range},
+        {"operating_point": "best_wind_adjusted_range", **best_wind},
+    ]
+    return pd.DataFrame(rows)
+
+
+def make_mission_profile_result(config: Config) -> dict[str, object] | None:
+    if config.mission.profile is None:
+        return None
+
+    profile = config.mission.profile
+
+    return evaluate_simple_mission_profile(
+        config,
+        outbound_distance_km=profile.outbound_distance_km,
+        loiter_duration_min=profile.loiter_duration_min,
+        return_distance_km=profile.return_distance_km,
+        outbound_wind_speed_m_per_s=profile.outbound_wind_speed_m_per_s,
+        return_wind_speed_m_per_s=profile.return_wind_speed_m_per_s,
+        cruise_mode=profile.cruise_mode,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+
+
+def mission_profile_segments_df(mission_profile: dict[str, object]) -> pd.DataFrame:
+    segments = mission_profile["segments"]
+    if not isinstance(segments, list):
+        raise TypeError("mission_profile['segments'] must be a list.")
+    return pd.DataFrame(segments)
+
+
+def make_sweep_df(config: Config) -> pd.DataFrame:
+    return build_speed_sweep(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+        min_speed_m_per_s=stall_speed_m_per_s(config),
+    )
+
+
+def make_mission_energy_df(mission_profile: dict[str, object]) -> pd.DataFrame:
+    segments = mission_profile["segments"]
+    if not isinstance(segments, list):
+        raise TypeError("mission_profile['segments'] must be a list.")
+
+    return pd.DataFrame(
+        {
+            "segment_name": [str(segment["segment_name"]) for segment in segments],
+            "energy_used_wh": [float(segment["energy_used_wh"]) for segment in segments],
+        }
+    ).set_index("segment_name")
+
+
+def make_remaining_energy_df(mission_profile: dict[str, object]) -> pd.DataFrame:
+    segments = mission_profile["segments"]
+    if not isinstance(segments, list):
+        raise TypeError("mission_profile['segments'] must be a list.")
+
+    available_energy_wh = float(mission_profile["available_energy_wh"])
+
+    labels = ["start"]
+    values = [available_energy_wh]
+
+    for segment in segments:
+        labels.append(str(segment["segment_name"]))
+        values.append(float(segment["remaining_energy_wh_after_segment"]))
+
+    return pd.DataFrame(
+        {
+            "mission_stage": labels,
+            "remaining_energy_wh": values,
+        }
+    ).set_index("mission_stage")
+
+
+def make_sweep_chart_df(sweep_df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    return sweep_df[["airspeed_m_per_s", *cols]].set_index("airspeed_m_per_s")
+
+
+st.set_page_config(
+    page_title="UAV Mission Performance Estimator",
+    layout="wide",
+)
+
+st.title("UAV Mission Performance Estimator")
+st.caption("Version 3.1 live Streamlit interface for the fixed-wing UAV performance and mission-profile engine.")
+
+config_options = list_yaml_configs(str(CONFIG_DIR))
+
+with st.sidebar:
+    st.header("Configuration")
+    selected_config = st.selectbox("Select YAML config", options=config_options)
+    run_app = st.button("Run analysis", type="primary")
+
+if not run_app:
+    st.info("Select a config in the sidebar and click 'Run analysis'.")
+    st.stop()
+
+config = load_config(selected_config)
+summary = make_performance_summary(config)
+sweep_df = make_sweep_df(config)
+operating_points_df = make_operating_points_summary(config)
+mission_profile = make_mission_profile_result(config)
+
+st.subheader("Selected configuration")
+st.code(selected_config)
+
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Total mass [kg]", f"{summary['total_mass_kg']:.2f}")
+c2.metric("Stall speed [m/s]", f"{summary['stall_speed_m_per_s']:.2f}")
+c3.metric("Min recommended cruise [m/s]", f"{summary['minimum_recommended_cruise_speed_m_per_s']:.2f}")
+c4.metric("Resolved air density [kg/m³]", f"{summary['resolved_air_density_kg_per_m3']:.3f}")
+
+c5, c6, c7, c8 = st.columns(4)
+c5.metric("Electrical power [W]", f"{summary['electrical_power_required_w']:.1f}")
+c6.metric("Endurance [h]", f"{summary['endurance_h']:.2f}")
+c7.metric("Still-air range [km]", f"{summary['still_air_range_km']:.1f}")
+c8.metric("Wind-adjusted range [km]", f"{summary['wind_adjusted_range_km']:.1f}")
+
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    [
+        "Performance",
+        "Operating points",
+        "Mission",
+        "Scenario comparison",
+        "Config",
+    ]
+)
+
+with tab1:
+    st.subheader("Speed sweep table")
+    st.dataframe(sweep_df.round(3), use_container_width=True)
+
+    st.subheader("Live charts")
+
+    st.markdown("**Power vs airspeed**")
+    st.line_chart(
+        make_sweep_chart_df(sweep_df, ["air_power_w", "electrical_power_w"]),
+        use_container_width=True,
+    )
+
+    st.markdown("**Endurance vs airspeed**")
+    st.line_chart(
+        make_sweep_chart_df(sweep_df, ["endurance_h"]),
+        use_container_width=True,
+    )
+
+    st.markdown("**Range vs airspeed**")
+    st.line_chart(
+        make_sweep_chart_df(sweep_df, ["still_air_range_km", "wind_adjusted_range_km"]),
+        use_container_width=True,
+    )
+
+with tab2:
+    st.subheader("Operating points")
+    st.dataframe(operating_points_df.round(3), use_container_width=True)
+
+with tab3:
+    st.subheader("Mission feasibility")
+
+    if config.mission.required_distance_km is not None:
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Mission feasible", str(is_mission_feasible(config)))
+        m2.metric("Range margin [km]", f"{range_margin_km(config):.2f}")
+        m3.metric("Energy margin [Wh]", f"{energy_margin_wh(config):.2f}")
+
+        m4, m5 = st.columns(2)
+        m4.metric("Required mission time [h]", f"{required_mission_time_hours(config):.2f}")
+        m5.metric("Required mission energy [Wh]", f"{required_mission_energy_wh(config):.2f}")
+
+    if mission_profile is not None:
+        st.subheader("Segmented mission profile")
+        st.metric("Profile feasible", str(mission_profile["mission_feasible"]))
+
+        s1, s2, s3 = st.columns(3)
+        s1.metric("Total mission time [h]", f"{float(mission_profile['total_time_h']):.2f}")
+        s2.metric("Energy used [Wh]", f"{float(mission_profile['total_energy_used_wh']):.2f}")
+        s3.metric("Remaining energy [Wh]", f"{float(mission_profile['remaining_energy_wh']):.2f}")
+
+        segments_df = mission_profile_segments_df(mission_profile)
+        st.dataframe(segments_df.round(3), use_container_width=True)
+
+        st.markdown("**Mission energy by segment**")
+        st.bar_chart(make_mission_energy_df(mission_profile), use_container_width=True)
+
+        st.markdown("**Remaining energy by segment**")
+        st.line_chart(make_remaining_energy_df(mission_profile), use_container_width=True)
+    else:
+        st.info("No segmented mission profile is defined in this config.")
+
+with tab4:
+    st.subheader("Mission scenario comparison")
+    scenario_df = compare_mission_scenarios(
+        config_paths=MISSION_SCENARIO_FILES,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+    st.dataframe(scenario_df.round(3), use_container_width=True)
+
+    st.markdown("**Mission scenario energy balance**")
+    scenario_chart_df = scenario_df.set_index("scenario")[["total_energy_used_wh", "remaining_energy_wh"]]
+    st.bar_chart(scenario_chart_df, use_container_width=True)
+
+    st.subheader("Configuration comparison")
+    config_df = compare_configurations(
+        config_paths=[
+            "configs/example_fixed_wing.yaml",
+            "configs/example_fixed_wing_long_range.yaml",
+            "configs/example_fixed_wing_fast.yaml",
+        ],
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+    st.dataframe(config_df.round(3), use_container_width=True)
+
+    st.markdown("**Maximum range by configuration**")
+    config_chart_df = config_df.set_index("configuration")[["maximum_still_air_range_km", "maximum_wind_adjusted_range_km"]]
+    st.bar_chart(config_chart_df, use_container_width=True)
+
+with tab5:
+    st.subheader("Loaded YAML")
+    st.code(yaml.dump(load_config_dict(selected_config), sort_keys=False), language="yaml")
