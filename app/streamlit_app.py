@@ -206,20 +206,150 @@ st.set_page_config(
 )
 
 st.title("UAV Mission Performance Estimator")
-st.caption("Version 3.2 live Streamlit interface with downloadable CSV outputs.")
+st.caption("Version 3.3 live Streamlit interface with editable mission and environment inputs.")
 
 config_options = list_yaml_configs(str(CONFIG_DIR))
 
 with st.sidebar:
     st.header("Configuration")
     selected_config = st.selectbox("Select YAML config", options=config_options)
+
+base_config = load_config(selected_config)
+working_config = base_config.model_copy(deep=True)
+
+with st.sidebar:
+    st.header("Editable inputs")
+
+    st.subheader("Environment")
+    altitude_m = st.number_input(
+        "Altitude [m]",
+        min_value=0.0,
+        value=float(base_config.environment.altitude_m or 0.0),
+        step=100.0,
+    )
+    general_wind_speed_m_per_s = st.number_input(
+        "General wind speed [m/s]",
+        value=float(base_config.environment.wind_speed_m_per_s),
+        step=1.0,
+    )
+
+    st.subheader("Mission")
+    cruise_speed_m_per_s = st.number_input(
+        "Cruise speed [m/s]",
+        min_value=1.0,
+        value=float(base_config.mission.cruise_speed_m_per_s),
+        step=0.5,
+    )
+
+    use_required_distance = st.checkbox(
+        "Use required mission distance",
+        value=base_config.mission.required_distance_km is not None,
+    )
+    required_distance_default = (
+        float(base_config.mission.required_distance_km)
+        if base_config.mission.required_distance_km is not None
+        else 100.0
+    )
+    required_distance_km = st.number_input(
+        "Required mission distance [km]",
+        min_value=1.0,
+        value=required_distance_default,
+        step=5.0,
+        disabled=not use_required_distance,
+    )
+
+    if working_config.mission.profile is not None:
+        st.subheader("Mission profile")
+
+        outbound_distance_km = st.number_input(
+            "Outbound distance [km]",
+            min_value=1.0,
+            value=float(working_config.mission.profile.outbound_distance_km),
+            step=1.0,
+        )
+
+        use_loiter = st.checkbox(
+            "Use loiter segment",
+            value=working_config.mission.profile.loiter_duration_min is not None,
+        )
+        loiter_default = (
+            float(working_config.mission.profile.loiter_duration_min)
+            if working_config.mission.profile.loiter_duration_min is not None
+            else 15.0
+        )
+        loiter_duration_min = st.number_input(
+            "Loiter duration [min]",
+            min_value=1.0,
+            value=loiter_default,
+            step=5.0,
+            disabled=not use_loiter,
+        )
+
+        use_return = st.checkbox(
+            "Use return segment",
+            value=working_config.mission.profile.return_distance_km is not None,
+        )
+        return_default = (
+            float(working_config.mission.profile.return_distance_km)
+            if working_config.mission.profile.return_distance_km is not None
+            else 25.0
+        )
+        return_distance_km = st.number_input(
+            "Return distance [km]",
+            min_value=1.0,
+            value=return_default,
+            step=1.0,
+            disabled=not use_return,
+        )
+
+        outbound_wind_speed_m_per_s = st.number_input(
+            "Outbound segment wind [m/s]",
+            value=float(working_config.mission.profile.outbound_wind_speed_m_per_s),
+            step=1.0,
+        )
+        return_wind_speed_m_per_s = st.number_input(
+            "Return segment wind [m/s]",
+            value=float(working_config.mission.profile.return_wind_speed_m_per_s),
+            step=1.0,
+        )
+
+        cruise_mode = st.selectbox(
+            "Cruise mode",
+            options=["fixed_speed", "best_range", "best_wind_adjusted_range"],
+            index=["fixed_speed", "best_range", "best_wind_adjusted_range"].index(
+                working_config.mission.profile.cruise_mode
+            ),
+        )
+
     run_app = st.button("Run analysis", type="primary")
 
 if not run_app:
-    st.info("Select a config in the sidebar and click 'Run analysis'.")
+    st.info("Select a config, adjust any inputs in the sidebar, and click 'Run analysis'.")
     st.stop()
 
-config = load_config(selected_config)
+working_config.environment.altitude_m = float(altitude_m)
+working_config.environment.air_density_kg_per_m3 = None
+working_config.environment.wind_speed_m_per_s = float(general_wind_speed_m_per_s)
+
+working_config.mission.cruise_speed_m_per_s = float(cruise_speed_m_per_s)
+working_config.mission.required_distance_km = (
+    float(required_distance_km) if use_required_distance else None
+)
+
+if working_config.mission.profile is not None:
+    working_config.mission.profile.outbound_distance_km = float(outbound_distance_km)
+    working_config.mission.profile.loiter_duration_min = (
+        float(loiter_duration_min) if use_loiter else None
+    )
+    working_config.mission.profile.return_distance_km = (
+        float(return_distance_km) if use_return else None
+    )
+    working_config.mission.profile.outbound_wind_speed_m_per_s = float(outbound_wind_speed_m_per_s)
+    working_config.mission.profile.return_wind_speed_m_per_s = float(return_wind_speed_m_per_s)
+    working_config.mission.profile.cruise_mode = cruise_mode
+
+config = working_config
+
 summary = make_performance_summary(config)
 sweep_df = make_sweep_df(config)
 operating_points_df = make_operating_points_summary(config)
@@ -384,5 +514,8 @@ with tab4:
     st.bar_chart(config_chart_df, use_container_width=True)
 
 with tab5:
-    st.subheader("Loaded YAML")
+    st.subheader("Base YAML")
     st.code(yaml.dump(load_config_dict(selected_config), sort_keys=False), language="yaml")
+
+    st.subheader("Active configuration after sidebar edits")
+    st.code(yaml.dump(config.model_dump(mode="python"), sort_keys=False), language="yaml")
