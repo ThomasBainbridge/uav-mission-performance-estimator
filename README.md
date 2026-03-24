@@ -1,8 +1,8 @@
 # UAV Mission Performance Estimator
 
-A Python-based engineering tool for estimating fixed-wing UAV mission performance from preliminary design inputs.
+A Python-based engineering tool for estimating fixed-wing UAV performance and mission-profile behaviour from preliminary design inputs.
 
-The tool uses inputs such as mass, payload, battery characteristics, aerodynamic assumptions, propulsion efficiency, cruise speed, and wind to estimate:
+The tool uses inputs such as mass, payload, battery characteristics, aerodynamic assumptions, propulsion efficiency, cruise speed, wind, and altitude to estimate:
 
 - power required
 - endurance
@@ -10,6 +10,8 @@ The tool uses inputs such as mass, payload, battery characteristics, aerodynamic
 - speed-performance trade-offs
 - configuration comparisons
 - mission feasibility
+- segmented mission-profile performance
+- mission scenario comparisons
 
 ## Current Features
 
@@ -17,11 +19,17 @@ The tool uses inputs such as mass, payload, battery characteristics, aerodynamic
 - stall speed and minimum recommended cruise speed
 - drag, power, endurance, and range calculations
 - airspeed sweep analysis
-- best-endurance and best-range speed identification
+- best-endurance and best-range operating point selection
 - comparison of multiple UAV configurations
 - mission feasibility assessment at chosen cruise speed
-- CSV export of results
+- config-driven segmented mission profiles
+- outbound / loiter / return mission evaluation
+- mission profile energy tracking by segment
+- ISA atmosphere support using altitude-based density
+- mission scenario comparison across multiple YAML cases
+- CSV export of sweep, comparison, and mission-profile results
 - automatic plot generation
+- automated test coverage with `pytest`
 
 ## Example Outputs
 
@@ -39,16 +47,19 @@ The tool uses inputs such as mass, payload, battery characteristics, aerodynamic
 
 ## Version 2 Enhancements
 
-Version 2 extends the tool beyond single-point performance estimation into simple mission-profile analysis.
+Version 2 extends the tool beyond single-point performance estimation into mission-profile and scenario analysis.
 
 New capabilities include:
 
-- reusable best-endurance and best-range operating point selection
+- reusable best-endurance, best-range, and best wind-adjusted range operating point selection
 - segmented mission profile evaluation for outbound, loiter, and return phases
-- mission energy usage and remaining-energy tracking by segment
+- mission profile energy usage and remaining-energy tracking by segment
 - mission profile CSV export
 - mission profile plot generation
 - ISA atmosphere support using altitude-based density estimation
+- config-driven mission profile definition in YAML
+- command-line config selection
+- comparison of multiple mission scenarios
 
 ### Mission Profile Outputs
 
@@ -58,14 +69,9 @@ New capabilities include:
 #### Remaining Energy by Segment
 ![Remaining Energy by Segment](assets/screenshots/remaining-energy-by-segment.png)
 
-## Project Structure
+## How to Run
 
-```text
-uav-mission-performance-estimator/
-├─ configs/
-├─ outputs/
-├─ src/uav_mpe/
-├─ tests/
-├─ README.md
-├─ pyproject.toml
-└─ .gitignore
+Run the tool with a selected config file:
+
+```powershell
+py -m uav_mpe.main --config configs/example_fixed_wing.yaml
