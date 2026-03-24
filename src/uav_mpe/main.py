@@ -3,14 +3,27 @@ import yaml
 
 from uav_mpe.models import Config
 from uav_mpe.performance import (
+    air_power_required_watts,
     battery_available_for_mission_j,
     battery_available_for_mission_wh,
     battery_nominal_energy_wh,
     battery_usable_energy_wh,
+    drag_coefficient,
+    drag_force_newtons,
+    electrical_power_required_watts,
+    endurance_hours,
+    endurance_seconds,
+    induced_drag_factor,
+    lift_coefficient,
     minimum_recommended_cruise_speed_m_per_s,
+    still_air_range_km,
+    still_air_range_m,
     stall_speed_m_per_s,
     total_mass_kg,
     weight_newtons,
+    wind_adjusted_ground_speed_m_per_s,
+    wind_adjusted_range_km,
+    wind_adjusted_range_m,
 )
 
 
@@ -24,7 +37,7 @@ def main() -> None:
     config = load_config("configs/example_fixed_wing.yaml")
 
     print("UAV Mission Performance Estimator")
-    print("-" * 40)
+    print("-" * 50)
     print(f"Total mass [kg]: {total_mass_kg(config):.3f}")
     print(f"Weight [N]: {weight_newtons(config):.3f}")
     print(f"Battery nominal energy [Wh]: {battery_nominal_energy_wh(config):.3f}")
@@ -36,6 +49,20 @@ def main() -> None:
         f"Minimum recommended cruise speed [m/s]: "
         f"{minimum_recommended_cruise_speed_m_per_s(config):.3f}"
     )
+    print(f"Cruise speed [m/s]: {config.mission.cruise_speed_m_per_s:.3f}")
+    print(f"Lift coefficient, Cl [-]: {lift_coefficient(config):.4f}")
+    print(f"Induced drag factor, k [-]: {induced_drag_factor(config):.5f}")
+    print(f"Drag coefficient, Cd [-]: {drag_coefficient(config):.4f}")
+    print(f"Drag force [N]: {drag_force_newtons(config):.3f}")
+    print(f"Air power required [W]: {air_power_required_watts(config):.3f}")
+    print(f"Electrical power required [W]: {electrical_power_required_watts(config):.3f}")
+    print(f"Endurance [s]: {endurance_seconds(config):.3f}")
+    print(f"Endurance [h]: {endurance_hours(config):.3f}")
+    print(f"Still-air range [m]: {still_air_range_m(config):.3f}")
+    print(f"Still-air range [km]: {still_air_range_km(config):.3f}")
+    print(f"Wind-adjusted ground speed [m/s]: {wind_adjusted_ground_speed_m_per_s(config):.3f}")
+    print(f"Wind-adjusted range [m]: {wind_adjusted_range_m(config):.3f}")
+    print(f"Wind-adjusted range [km]: {wind_adjusted_range_km(config):.3f}")
 
 
 if __name__ == "__main__":
