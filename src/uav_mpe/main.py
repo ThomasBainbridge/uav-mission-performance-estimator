@@ -1,7 +1,9 @@
+import argparse
 from pathlib import Path
 
 import yaml
 
+from uav_mpe.atmosphere import get_air_density_kg_per_m3
 from uav_mpe.comparison import compare_configurations
 from uav_mpe.exporting import save_comparison_to_csv, save_sweep_to_csv
 from uav_mpe.mission import (
@@ -11,7 +13,21 @@ from uav_mpe.mission import (
     required_mission_energy_wh,
     required_mission_time_hours,
 )
+from uav_mpe.mission_profile import evaluate_simple_mission_profile
+from uav_mpe.mission_profile_export import (
+    save_mission_profile_segments_to_csv,
+    save_mission_profile_summary_to_csv,
+)
+from uav_mpe.mission_profile_plotting import (
+    plot_mission_energy_by_segment,
+    plot_remaining_energy_by_segment,
+)
 from uav_mpe.models import Config
+from uav_mpe.operating_points import (
+    get_best_endurance_operating_point,
+    get_best_range_operating_point,
+    get_best_wind_adjusted_range_operating_point,
+)
 from uav_mpe.performance import (
     air_power_required_watts,
     battery_available_for_mission_j,
@@ -48,39 +64,37 @@ from uav_mpe.sweeps import (
     build_speed_sweep,
 )
 
-from uav_mpe.operating_points import (
-    get_best_endurance_operating_point,
-    get_best_range_operating_point,
-    get_best_wind_adjusted_range_operating_point,
-)
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Fixed-wing UAV mission performance estimator"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="configs/example_fixed_wing.yaml",
+        help="Path to YAML configuration file",
+    )
+    return parser.parse_args()
+
 
 def load_config(path: str | Path) -> Config:
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return Config.model_validate(data)
 
-from uav_mpe.mission_profile import evaluate_simple_mission_profile
 
-from uav_mpe.mission_profile_export import (
-    save_mission_profile_segments_to_csv,
-    save_mission_profile_summary_to_csv,
-)
-
-from uav_mpe.mission_profile_plotting import (
-    plot_mission_energy_by_segment,
-    plot_remaining_energy_by_segment,
-)
-
-from uav_mpe.atmosphere import get_air_density_kg_per_m3
-
-
-def main() -> None:
-    config = load_config("configs/example_fixed_wing.yaml")
+def main(config_path: str) -> None:
+    config = load_config(config_path)
 
     print("UAV Mission Performance Estimator")
     print("-" * 50)
+    print(f"Loaded config: {config_path}")
     print(f"Total mass [kg]: {total_mass_kg(config):.3f}")
     print(f"Weight [N]: {weight_newtons(config):.3f}")
+    print(f"Resolved air density [kg/m^3]: {get_air_density_kg_per_m3(config):.4f}")
+    if config.environment.altitude_m is not None:
+        print(f"Altitude [m]: {config.environment.altitude_m:.1f}")
     print(f"Battery nominal energy [Wh]: {battery_nominal_energy_wh(config):.3f}")
     print(f"Battery usable energy [Wh]: {battery_usable_energy_wh(config):.3f}")
     print(f"Battery available for mission [Wh]: {battery_available_for_mission_wh(config):.3f}")
@@ -116,6 +130,102 @@ def main() -> None:
         print(f"Range margin [km]: {range_margin_km(config):.3f}")
         print(f"Energy margin [Wh]: {energy_margin_wh(config):.3f}")
         print(f"Mission feasible [-]: {is_mission_feasible(config)}")
+
+    print()
+    print("Version 2 operating points")
+    print("-" * 50)
+
+    best_endurance_op = get_best_endurance_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+    best_range_op = get_best_range_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+    best_wind_range_op = get_best_wind_adjusted_range_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+
+    print("Best endurance operating point:")
+    print(best_endurance_op)
+
+    print()
+    print("Best still-air range operating point:")
+    print(best_range_op)
+
+    print()
+    print("Best wind-adjusted range operating point:")
+    print(best_wind_range_op)
+
+    if config.mission.profile is not None:
+        print()
+        print("Loaded mission profile from config")
+        print("-" * 50)
+        print(config.mission.profile)
+
+        print()
+        print("Version 2 mission profile")
+        print("-" * 50)
+
+        profile = config.mission.profile
+
+        mission_profile = evaluate_simple_mission_profile(
+            config,
+            outbound_distance_km=profile.outbound_distance_km,
+            loiter_duration_min=profile.loiter_duration_min,
+            return_distance_km=profile.return_distance_km,
+            outbound_wind_speed_m_per_s=profile.outbound_wind_speed_m_per_s,
+            return_wind_speed_m_per_s=profile.return_wind_speed_m_per_s,
+            cruise_mode=profile.cruise_mode,
+            max_speed_m_per_s=40.0,
+            num_points=120,
+        )
+
+        print(f"Mission feasible [-]: {mission_profile['mission_feasible']}")
+        print(f"Total mission time [h]: {mission_profile['total_time_h']:.3f}")
+        print(f"Total mission energy used [Wh]: {mission_profile['total_energy_used_wh']:.3f}")
+        print(f"Remaining energy [Wh]: {mission_profile['remaining_energy_wh']:.3f}")
+
+        print()
+        print("Mission profile segments")
+        print("-" * 50)
+        for segment in mission_profile["segments"]:
+            print(segment)
+
+        mission_segments_csv = save_mission_profile_segments_to_csv(
+            mission_profile,
+            "outputs/mission_profile_segments.csv",
+        )
+        mission_summary_csv = save_mission_profile_summary_to_csv(
+            mission_profile,
+            "outputs/mission_profile_summary.csv",
+        )
+
+        print()
+        print("Saved mission profile CSV files")
+        print("-" * 50)
+        print(mission_segments_csv)
+        print(mission_summary_csv)
+
+        mission_energy_plot = plot_mission_energy_by_segment(
+            mission_profile,
+            "outputs/mission_energy_by_segment.png",
+        )
+        remaining_energy_plot = plot_remaining_energy_by_segment(
+            mission_profile,
+            "outputs/remaining_energy_by_segment.png",
+        )
+
+        print()
+        print("Saved mission profile plots")
+        print("-" * 50)
+        print(mission_energy_plot)
+        print(remaining_energy_plot)
 
     print()
     print("Speed sweep summary")
@@ -238,111 +348,7 @@ def main() -> None:
     print(sweep_csv)
     print(comparison_csv)
 
-    print()
-    print("Version 2 operating points")
-    print("-" * 50)
-
-    best_endurance_op = get_best_endurance_operating_point(
-        config,
-        max_speed_m_per_s=40.0,
-        num_points=120,
-    )
-    best_range_op = get_best_range_operating_point(
-        config,
-        max_speed_m_per_s=40.0,
-        num_points=120,
-    )
-    best_wind_range_op = get_best_wind_adjusted_range_operating_point(
-        config,
-        max_speed_m_per_s=40.0,
-        num_points=120,
-    )
-
-    print("Best endurance operating point:")
-    print(best_endurance_op)
-
-    print()
-    print("Best still-air range operating point:")
-    print(best_range_op)
-
-    print()
-    print("Best wind-adjusted range operating point:")
-    print(best_wind_range_op)
-
-    if config.mission.profile is not None:
-        print()
-        print("Loaded mission profile from config")
-        print("-" * 50)
-        print(config.mission.profile)
-
-    print()
-    print("Version 2 mission profile")
-    print("-" * 50)
-
-    if config.mission.profile is None:
-        raise ValueError("Mission profile is not defined in the config.")
-
-    profile = config.mission.profile
-
-    mission_profile = evaluate_simple_mission_profile(
-        config,
-        outbound_distance_km=profile.outbound_distance_km,
-        loiter_duration_min=profile.loiter_duration_min,
-        return_distance_km=profile.return_distance_km,
-        outbound_wind_speed_m_per_s=profile.outbound_wind_speed_m_per_s,
-        return_wind_speed_m_per_s=profile.return_wind_speed_m_per_s,
-        cruise_mode=profile.cruise_mode,
-        max_speed_m_per_s=40.0,
-        num_points=120,
-    )
-
-    print(f"Mission feasible [-]: {mission_profile['mission_feasible']}")
-    print(f"Total mission time [h]: {mission_profile['total_time_h']:.3f}")
-    print(f"Total mission energy used [Wh]: {mission_profile['total_energy_used_wh']:.3f}")
-    print(f"Remaining energy [Wh]: {mission_profile['remaining_energy_wh']:.3f}")
-
-    print()
-    print("Mission profile segments")
-    print("-" * 50)
-    for segment in mission_profile["segments"]:
-        print(segment)
-
-        mission_segments_csv = save_mission_profile_segments_to_csv(
-        mission_profile,
-        "outputs/mission_profile_segments.csv",
-    )
-    mission_summary_csv = save_mission_profile_summary_to_csv(
-        mission_profile,
-        "outputs/mission_profile_summary.csv",
-    )
-
-    print()
-    print("Saved mission profile CSV files")
-    print("-" * 50)
-    print(mission_segments_csv)
-    print(mission_summary_csv)
-
-    mission_energy_plot = plot_mission_energy_by_segment(
-        mission_profile,
-        "outputs/mission_energy_by_segment.png",
-    )
-    remaining_energy_plot = plot_remaining_energy_by_segment(
-        mission_profile,
-        "outputs/remaining_energy_by_segment.png",
-    )
-
-    print()
-    print("Saved mission profile plots")
-    print("-" * 50)
-    print(mission_energy_plot)
-    print(remaining_energy_plot)
-
-    print(f"Resolved air density [kg/m^3]: {get_air_density_kg_per_m3(config):.4f}")
-    if config.environment.altitude_m is not None:
-        print(f"Altitude [m]: {config.environment.altitude_m:.1f}")
-
-
-
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args.config)
