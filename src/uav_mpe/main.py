@@ -104,7 +104,7 @@ def main() -> None:
 
     max_speed_m_per_s = 40.0
     num_points = 120
-    diagnostic_min_speed_m_per_s = 8.0
+    diagnostic_min_speed_m_per_s = stall_speed_m_per_s(config)
 
     sweep_df = build_speed_sweep(
         config,
@@ -153,9 +153,27 @@ def main() -> None:
         "outputs/speed_sweep_results.csv",
     )
 
-    power_plot = plot_power_vs_speed(sweep_df, "outputs/power_vs_speed.png")
-    endurance_plot = plot_endurance_vs_speed(sweep_df, "outputs/endurance_vs_speed.png")
-    range_plot = plot_range_vs_speed(sweep_df, "outputs/range_vs_speed.png")
+    v_stall = stall_speed_m_per_s(config)
+    v_min_recommended = minimum_recommended_cruise_speed_m_per_s(config)
+
+    power_plot = plot_power_vs_speed(
+        sweep_df,
+        "outputs/power_vs_speed.png",
+        v_stall_m_per_s=v_stall,
+        v_min_recommended_m_per_s=v_min_recommended,
+    )
+    endurance_plot = plot_endurance_vs_speed(
+        sweep_df,
+        "outputs/endurance_vs_speed.png",
+        v_stall_m_per_s=v_stall,
+        v_min_recommended_m_per_s=v_min_recommended,
+    )
+    range_plot = plot_range_vs_speed(
+        sweep_df,
+        "outputs/range_vs_speed.png",
+        v_stall_m_per_s=v_stall,
+        v_min_recommended_m_per_s=v_min_recommended,
+    )
 
     print()
     print("Saved plots")
