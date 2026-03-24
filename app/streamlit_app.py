@@ -64,6 +64,25 @@ def load_config(path: str) -> Config:
     return Config.model_validate(data)
 
 
+def dataframe_to_csv_bytes(df: pd.DataFrame) -> bytes:
+    return df.to_csv(index=False).encode("utf-8")
+
+
+def mission_profile_summary_df(mission_profile: dict[str, object]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "available_energy_wh": float(mission_profile["available_energy_wh"]),
+                "total_time_h": float(mission_profile["total_time_h"]),
+                "total_energy_used_wh": float(mission_profile["total_energy_used_wh"]),
+                "remaining_energy_wh": float(mission_profile["remaining_energy_wh"]),
+                "mission_feasible": bool(mission_profile["mission_feasible"]),
+                "number_of_segments": len(mission_profile["segments"]),
+            }
+        ]
+    )
+
+
 def make_performance_summary(config: Config) -> dict[str, float]:
     return {
         "total_mass_kg": total_mass_kg(config),
@@ -187,7 +206,7 @@ st.set_page_config(
 )
 
 st.title("UAV Mission Performance Estimator")
-st.caption("Version 3.1 live Streamlit interface for the fixed-wing UAV performance and mission-profile engine.")
+st.caption("Version 3.2 live Streamlit interface with downloadable CSV outputs.")
 
 config_options = list_yaml_configs(str(CONFIG_DIR))
 
@@ -205,6 +224,7 @@ summary = make_performance_summary(config)
 sweep_df = make_sweep_df(config)
 operating_points_df = make_operating_points_summary(config)
 mission_profile = make_mission_profile_result(config)
+selected_stem = Path(selected_config).stem
 
 st.subheader("Selected configuration")
 st.code(selected_config)
@@ -234,6 +254,12 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
 with tab1:
     st.subheader("Speed sweep table")
     st.dataframe(sweep_df.round(3), use_container_width=True)
+    st.download_button(
+        "Download speed sweep CSV",
+        data=dataframe_to_csv_bytes(sweep_df),
+        file_name=f"{selected_stem}_speed_sweep.csv",
+        mime="text/csv",
+    )
 
     st.subheader("Live charts")
 
@@ -258,6 +284,12 @@ with tab1:
 with tab2:
     st.subheader("Operating points")
     st.dataframe(operating_points_df.round(3), use_container_width=True)
+    st.download_button(
+        "Download operating points CSV",
+        data=dataframe_to_csv_bytes(operating_points_df),
+        file_name=f"{selected_stem}_operating_points.csv",
+        mime="text/csv",
+    )
 
 with tab3:
     st.subheader("Mission feasibility")
@@ -281,8 +313,26 @@ with tab3:
         s2.metric("Energy used [Wh]", f"{float(mission_profile['total_energy_used_wh']):.2f}")
         s3.metric("Remaining energy [Wh]", f"{float(mission_profile['remaining_energy_wh']):.2f}")
 
+        mission_summary_df = mission_profile_summary_df(mission_profile)
         segments_df = mission_profile_segments_df(mission_profile)
+
+        st.markdown("**Mission summary**")
+        st.dataframe(mission_summary_df.round(3), use_container_width=True)
+        st.download_button(
+            "Download mission summary CSV",
+            data=dataframe_to_csv_bytes(mission_summary_df),
+            file_name=f"{selected_stem}_mission_summary.csv",
+            mime="text/csv",
+        )
+
+        st.markdown("**Mission segments**")
         st.dataframe(segments_df.round(3), use_container_width=True)
+        st.download_button(
+            "Download mission segments CSV",
+            data=dataframe_to_csv_bytes(segments_df),
+            file_name=f"{selected_stem}_mission_segments.csv",
+            mime="text/csv",
+        )
 
         st.markdown("**Mission energy by segment**")
         st.bar_chart(make_mission_energy_df(mission_profile), use_container_width=True)
@@ -300,6 +350,12 @@ with tab4:
         num_points=120,
     )
     st.dataframe(scenario_df.round(3), use_container_width=True)
+    st.download_button(
+        "Download mission scenario comparison CSV",
+        data=dataframe_to_csv_bytes(scenario_df),
+        file_name="mission_scenario_comparison.csv",
+        mime="text/csv",
+    )
 
     st.markdown("**Mission scenario energy balance**")
     scenario_chart_df = scenario_df.set_index("scenario")[["total_energy_used_wh", "remaining_energy_wh"]]
@@ -316,6 +372,12 @@ with tab4:
         num_points=120,
     )
     st.dataframe(config_df.round(3), use_container_width=True)
+    st.download_button(
+        "Download configuration comparison CSV",
+        data=dataframe_to_csv_bytes(config_df),
+        file_name="configuration_comparison.csv",
+        mime="text/csv",
+    )
 
     st.markdown("**Maximum range by configuration**")
     config_chart_df = config_df.set_index("configuration")[["maximum_still_air_range_km", "maximum_wind_adjusted_range_km"]]
