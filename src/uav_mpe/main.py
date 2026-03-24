@@ -61,6 +61,11 @@ def load_config(path: str | Path) -> Config:
 
 from uav_mpe.mission_profile import evaluate_simple_mission_profile
 
+from uav_mpe.mission_profile_export import (
+    save_mission_profile_segments_to_csv,
+    save_mission_profile_summary_to_csv,
+)
+
 
 def main() -> None:
     config = load_config("configs/example_fixed_wing.yaml")
@@ -283,6 +288,23 @@ def main() -> None:
     print("-" * 50)
     for segment in mission_profile["segments"]:
         print(segment)
+
+        mission_segments_csv = save_mission_profile_segments_to_csv(
+        mission_profile,
+        "outputs/mission_profile_segments.csv",
+    )
+    mission_summary_csv = save_mission_profile_summary_to_csv(
+        mission_profile,
+        "outputs/mission_profile_summary.csv",
+    )
+
+    print()
+    print("Saved mission profile CSV files")
+    print("-" * 50)
+    print(mission_segments_csv)
+    print(mission_summary_csv)
+
+    
 
 
 if __name__ == "__main__":
