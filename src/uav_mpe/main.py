@@ -48,6 +48,11 @@ from uav_mpe.sweeps import (
     build_speed_sweep,
 )
 
+from uav_mpe.operating_points import (
+    get_best_endurance_operating_point,
+    get_best_range_operating_point,
+    get_best_wind_adjusted_range_operating_point,
+)
 
 def load_config(path: str | Path) -> Config:
     with open(path, "r", encoding="utf-8") as f:
@@ -218,6 +223,37 @@ def main() -> None:
     print("-" * 50)
     print(sweep_csv)
     print(comparison_csv)
+
+    print()
+    print("Version 2 operating points")
+    print("-" * 50)
+
+    best_endurance_op = get_best_endurance_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+    best_range_op = get_best_range_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+    best_wind_range_op = get_best_wind_adjusted_range_operating_point(
+        config,
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+
+    print("Best endurance operating point:")
+    print(best_endurance_op)
+
+    print()
+    print("Best still-air range operating point:")
+    print(best_range_op)
+
+    print()
+    print("Best wind-adjusted range operating point:")
+    print(best_wind_range_op)
 
 
 if __name__ == "__main__":

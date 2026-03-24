@@ -12,7 +12,7 @@ aircraft:
 
 environment:
   air_density_kg_per_m3: 1.225
-  wind_speed_m_per_s: 0.0
+  wind_speed_m_per_s: 5.0
   g_m_per_s2: 9.81
 
 mission:
