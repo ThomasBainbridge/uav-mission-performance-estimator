@@ -1,0 +1,17 @@
+[project]
+name = "uav-mpe"
+version = "0.1.0"
+description = "Fixed-wing UAV mission performance estimator"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy",
+    "pandas",
+    "pydantic",
+    "pyyaml",
+    "matplotlib"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
