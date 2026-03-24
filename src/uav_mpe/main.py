@@ -25,6 +25,12 @@ from uav_mpe.performance import (
     wind_adjusted_range_km,
     wind_adjusted_range_m,
 )
+from uav_mpe.sweeps import (
+    best_endurance_row,
+    best_still_air_range_row,
+    best_wind_adjusted_range_row,
+    build_speed_sweep,
+)
 
 
 def load_config(path: str | Path) -> Config:
@@ -63,6 +69,66 @@ def main() -> None:
     print(f"Wind-adjusted ground speed [m/s]: {wind_adjusted_ground_speed_m_per_s(config):.3f}")
     print(f"Wind-adjusted range [m]: {wind_adjusted_range_m(config):.3f}")
     print(f"Wind-adjusted range [km]: {wind_adjusted_range_km(config):.3f}")
+
+    print()
+    print("Speed sweep summary")
+    print("-" * 50)
+
+    max_speed_m_per_s = 40.0
+    num_points = 120
+
+    sweep_df = build_speed_sweep(
+        config,
+        max_speed_m_per_s=max_speed_m_per_s,
+        num_points=num_points,
+    )
+
+    best_endurance = best_endurance_row(
+        config,
+        max_speed_m_per_s=max_speed_m_per_s,
+        num_points=num_points,
+    )
+    best_still_air_range = best_still_air_range_row(
+        config,
+        max_speed_m_per_s=max_speed_m_per_s,
+        num_points=num_points,
+    )
+    best_wind_range = best_wind_adjusted_range_row(
+        config,
+        max_speed_m_per_s=max_speed_m_per_s,
+        num_points=num_points,
+    )
+
+    print(f"Sweep points [-]: {len(sweep_df)}")
+    print(
+        f"Best endurance speed [m/s]: "
+        f"{best_endurance['airspeed_m_per_s']:.3f}"
+    )
+    print(
+        f"Maximum endurance [h]: "
+        f"{best_endurance['endurance_h']:.3f}"
+    )
+    print(
+        f"Best still-air range speed [m/s]: "
+        f"{best_still_air_range['airspeed_m_per_s']:.3f}"
+    )
+    print(
+        f"Maximum still-air range [km]: "
+        f"{best_still_air_range['still_air_range_km']:.3f}"
+    )
+    print(
+        f"Best wind-adjusted range speed [m/s]: "
+        f"{best_wind_range['airspeed_m_per_s']:.3f}"
+    )
+    print(
+        f"Maximum wind-adjusted range [km]: "
+        f"{best_wind_range['wind_adjusted_range_km']:.3f}"
+    )
+
+    print()
+    print("First five sweep rows")
+    print("-" * 50)
+    print(sweep_df.head().to_string(index=False))
 
 
 if __name__ == "__main__":
