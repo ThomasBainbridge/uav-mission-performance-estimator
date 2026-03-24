@@ -1,1 +1,0 @@
-print("UAV Mission Performance Estimator")
