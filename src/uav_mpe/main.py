@@ -64,6 +64,9 @@ from uav_mpe.sweeps import (
     build_speed_sweep,
 )
 
+from uav_mpe.mission_scenario_comparison import compare_mission_scenarios
+from uav_mpe.mission_scenario_plotting import plot_mission_scenario_energy_balance
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -347,6 +350,38 @@ def main(config_path: str) -> None:
     print("-" * 50)
     print(sweep_csv)
     print(comparison_csv)
+
+    print()
+    print("Mission scenario comparison")
+    print("-" * 50)
+
+    mission_scenario_df = compare_mission_scenarios(
+        config_paths=[
+            "configs/mission_baseline.yaml",
+            "configs/mission_windy.yaml",
+            "configs/mission_loiter.yaml",
+        ],
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+
+    print(mission_scenario_df.round(3).to_string(index=False))
+
+    mission_scenario_csv = save_comparison_to_csv(
+        mission_scenario_df,
+        "outputs/mission_scenario_comparison.csv",
+    )
+
+    mission_scenario_plot = plot_mission_scenario_energy_balance(
+        mission_scenario_df,
+        "outputs/mission_scenario_energy_balance.png",
+    )
+
+    print()
+    print("Saved mission scenario comparison outputs")
+    print("-" * 50)
+    print(mission_scenario_csv)
+    print(mission_scenario_plot)
 
 
 if __name__ == "__main__":
