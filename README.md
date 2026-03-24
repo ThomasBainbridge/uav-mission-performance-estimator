@@ -77,3 +77,18 @@ Run the CLI version with a selected config file:
 
 ```powershell
 py -m uav_mpe.main --config configs/example_fixed_wing.yaml
+
+## Project Structure
+
+```text
+uav-mission-performance-estimator/
+├─ app/
+│  └─ streamlit_app.py
+├─ assets/screenshots/
+├─ configs/
+├─ outputs/
+├─ src/uav_mpe/
+├─ tests/
+├─ README.md
+├─ pyproject.toml
+└─ .gitignore
