@@ -37,6 +37,27 @@ The tool uses inputs such as mass, payload, battery characteristics, aerodynamic
 ### Configuration Comparison
 ![Configuration Comparison](assets/screenshots/configuration-comparison.png)
 
+## Version 2 Enhancements
+
+Version 2 extends the tool beyond single-point performance estimation into simple mission-profile analysis.
+
+New capabilities include:
+
+- reusable best-endurance and best-range operating point selection
+- segmented mission profile evaluation for outbound, loiter, and return phases
+- mission energy usage and remaining-energy tracking by segment
+- mission profile CSV export
+- mission profile plot generation
+- ISA atmosphere support using altitude-based density estimation
+
+### Mission Profile Outputs
+
+#### Mission Energy by Segment
+![Mission Energy by Segment](assets/screenshots/mission-energy-by-segment.png)
+
+#### Remaining Energy by Segment
+![Remaining Energy by Segment](assets/screenshots/remaining-energy-by-segment.png)
+
 ## Project Structure
 
 ```text
