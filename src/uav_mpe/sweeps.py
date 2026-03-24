@@ -23,12 +23,16 @@ def build_speed_sweep(
     config: Config,
     max_speed_m_per_s: float,
     num_points: int = 100,
+    min_speed_m_per_s: float | None = None,
 ) -> pd.DataFrame:
-    v_min = minimum_recommended_cruise_speed_m_per_s(config)
+    if min_speed_m_per_s is None:
+        v_min = minimum_recommended_cruise_speed_m_per_s(config)
+    else:
+        v_min = float(min_speed_m_per_s)
 
     if max_speed_m_per_s <= v_min:
         raise ValueError(
-            f"max_speed_m_per_s must be greater than minimum recommended cruise speed "
+            f"max_speed_m_per_s must be greater than minimum speed "
             f"({v_min:.3f} m/s)."
         )
 

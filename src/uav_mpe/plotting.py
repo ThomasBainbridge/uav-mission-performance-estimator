@@ -86,3 +86,37 @@ def plot_range_vs_speed(
     plt.close()
 
     return path
+
+
+def plot_comparison_ranges(
+    comparison_df: pd.DataFrame,
+    output_path: str | Path,
+) -> Path:
+    path = _prepare_output_path(output_path)
+
+    plt.figure(figsize=(9, 5))
+    x = comparison_df["configuration"]
+
+    plt.plot(
+        x,
+        comparison_df["maximum_still_air_range_km"],
+        marker="o",
+        label="Still-air range",
+    )
+    plt.plot(
+        x,
+        comparison_df["maximum_wind_adjusted_range_km"],
+        marker="o",
+        label="Wind-adjusted range",
+    )
+
+    plt.xlabel("Configuration")
+    plt.ylabel("Maximum range [km]")
+    plt.title("Configuration Comparison: Maximum Range")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(path, dpi=300)
+    plt.close()
+
+    return path

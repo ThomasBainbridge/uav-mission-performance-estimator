@@ -1,7 +1,9 @@
 from pathlib import Path
 
+from uav_mpe.comparison import compare_configurations
 from uav_mpe.models import Aircraft, Config, Environment, Mission
 from uav_mpe.plotting import (
+    plot_comparison_ranges,
     plot_endurance_vs_speed,
     plot_power_vs_speed,
     plot_range_vs_speed,
@@ -64,6 +66,24 @@ def test_plot_range_vs_speed_creates_file(tmp_path: Path):
 
     output = tmp_path / "range_vs_speed.png"
     returned_path = plot_range_vs_speed(df, output)
+
+    assert returned_path.exists()
+    assert returned_path == output
+
+
+def test_plot_comparison_ranges_creates_file(tmp_path: Path):
+    comparison_df = compare_configurations(
+        config_paths=[
+            "configs/example_fixed_wing.yaml",
+            "configs/example_fixed_wing_long_range.yaml",
+            "configs/example_fixed_wing_fast.yaml",
+        ],
+        max_speed_m_per_s=40.0,
+        num_points=50,
+    )
+
+    output = tmp_path / "configuration_comparison_ranges.png"
+    returned_path = plot_comparison_ranges(comparison_df, output)
 
     assert returned_path.exists()
     assert returned_path == output
