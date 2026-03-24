@@ -20,3 +20,11 @@ mission:
   reserve_fraction: 0.10
   cruise_speed_m_per_s: 20.0
   required_distance_km: 100.0
+
+  profile:
+    outbound_distance_km: 25.0
+    loiter_duration_min: 15.0
+    return_distance_km: 25.0
+    outbound_wind_speed_m_per_s: 3.0
+    return_wind_speed_m_per_s: -2.0
+    cruise_mode: best_range

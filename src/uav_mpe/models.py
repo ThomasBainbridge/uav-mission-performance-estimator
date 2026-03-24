@@ -29,11 +29,35 @@ class Environment(BaseModel):
         return self
 
 
+class MissionSegmentProfile(BaseModel):
+    outbound_distance_km: float = Field(gt=0)
+    loiter_duration_min: float | None = Field(default=None, gt=0)
+    return_distance_km: float | None = Field(default=None, gt=0)
+    outbound_wind_speed_m_per_s: float = 0.0
+    return_wind_speed_m_per_s: float = 0.0
+    cruise_mode: str = "best_range"
+
+    @model_validator(mode="after")
+    def validate_cruise_mode(self):
+        allowed = {
+            "fixed_speed",
+            "best_range",
+            "best_wind_adjusted_range",
+        }
+        if self.cruise_mode not in allowed:
+            raise ValueError(
+                "cruise_mode must be one of: "
+                "'fixed_speed', 'best_range', 'best_wind_adjusted_range'."
+            )
+        return self
+
+
 class Mission(BaseModel):
     usable_battery_fraction: float = Field(gt=0, le=1)
     reserve_fraction: float = Field(ge=0, lt=1)
     cruise_speed_m_per_s: float = Field(gt=0)
     required_distance_km: float | None = Field(default=None, gt=0)
+    profile: MissionSegmentProfile | None = None
 
 
 class Config(BaseModel):

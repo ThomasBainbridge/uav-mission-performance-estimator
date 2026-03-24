@@ -269,18 +269,29 @@ def main() -> None:
     print("Best wind-adjusted range operating point:")
     print(best_wind_range_op)
 
+    if config.mission.profile is not None:
+        print()
+        print("Loaded mission profile from config")
+        print("-" * 50)
+        print(config.mission.profile)
+
     print()
     print("Version 2 mission profile")
     print("-" * 50)
 
+    if config.mission.profile is None:
+        raise ValueError("Mission profile is not defined in the config.")
+
+    profile = config.mission.profile
+
     mission_profile = evaluate_simple_mission_profile(
         config,
-        outbound_distance_km=25.0,
-        loiter_duration_min=15.0,
-        return_distance_km=25.0,
-        outbound_wind_speed_m_per_s=3.0,
-        return_wind_speed_m_per_s=-2.0,
-        cruise_mode="best_range",
+        outbound_distance_km=profile.outbound_distance_km,
+        loiter_duration_min=profile.loiter_duration_min,
+        return_distance_km=profile.return_distance_km,
+        outbound_wind_speed_m_per_s=profile.outbound_wind_speed_m_per_s,
+        return_wind_speed_m_per_s=profile.return_wind_speed_m_per_s,
+        cruise_mode=profile.cruise_mode,
         max_speed_m_per_s=40.0,
         num_points=120,
     )
