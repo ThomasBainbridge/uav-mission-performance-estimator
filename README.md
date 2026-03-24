@@ -23,6 +23,20 @@ The tool uses inputs such as mass, payload, battery characteristics, aerodynamic
 - CSV export of results
 - automatic plot generation
 
+## Example Outputs
+
+### Power vs Airspeed
+![Power vs Airspeed](assets/screenshots/power-vs-speed.png)
+
+### Endurance vs Airspeed
+![Endurance vs Airspeed](assets/screenshots/endurance-vs-speed.png)
+
+### Range vs Airspeed
+![Range vs Airspeed](assets/screenshots/range-vs-speed.png)
+
+### Configuration Comparison
+![Configuration Comparison](assets/screenshots/configuration-comparison.png)
+
 ## Project Structure
 
 ```text
