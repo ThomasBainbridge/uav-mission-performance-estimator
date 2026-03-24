@@ -1,7 +1,9 @@
 from pathlib import Path
+
 import yaml
 
 from uav_mpe.comparison import compare_configurations
+from uav_mpe.exporting import save_comparison_to_csv, save_sweep_to_csv
 from uav_mpe.models import Config
 from uav_mpe.performance import (
     air_power_required_watts,
@@ -84,14 +86,13 @@ def main() -> None:
     max_speed_m_per_s = 40.0
     num_points = 120
 
-    diagnostic_min_speed_m_per_s = 1.05 * stall_speed_m_per_s(config)
+    diagnostic_min_speed_m_per_s = 8.0
 
     sweep_df = build_speed_sweep(
-    config,
-    max_speed_m_per_s=max_speed_m_per_s,
-    num_points=num_points,
-    min_speed_m_per_s=diagnostic_min_speed_m_per_s,
-
+        config,
+        max_speed_m_per_s=max_speed_m_per_s,
+        num_points=num_points,
+        min_speed_m_per_s=diagnostic_min_speed_m_per_s,
     )
 
     best_endurance = best_endurance_row(
@@ -118,6 +119,22 @@ def main() -> None:
     print(f"Best wind-adjusted range speed [m/s]: {best_wind_range['airspeed_m_per_s']:.3f}")
     print(f"Maximum wind-adjusted range [km]: {best_wind_range['wind_adjusted_range_km']:.3f}")
 
+    print()
+    print("Diagnostic sweep bounds")
+    print("-" * 50)
+    print(f"Minimum plotted speed [m/s]: {sweep_df['airspeed_m_per_s'].min():.3f}")
+    print(f"Maximum plotted speed [m/s]: {sweep_df['airspeed_m_per_s'].max():.3f}")
+
+    print()
+    print("First five sweep rows")
+    print("-" * 50)
+    print(sweep_df.head().to_string(index=False))
+
+    sweep_csv = save_sweep_to_csv(
+        sweep_df,
+        "outputs/speed_sweep_results.csv",
+    )
+
     power_plot = plot_power_vs_speed(sweep_df, "outputs/power_vs_speed.png")
     endurance_plot = plot_endurance_vs_speed(sweep_df, "outputs/endurance_vs_speed.png")
     range_plot = plot_range_vs_speed(sweep_df, "outputs/range_vs_speed.png")
@@ -143,17 +160,28 @@ def main() -> None:
         num_points=120,
     )
 
-    print(comparison_df.to_string(index=False))
+    print(comparison_df.round(3).to_string(index=False))
 
     comparison_plot = plot_comparison_ranges(
         comparison_df,
         "outputs/configuration_comparison_ranges.png",
     )
 
+    comparison_csv = save_comparison_to_csv(
+        comparison_df,
+        "outputs/configuration_comparison_results.csv",
+    )
+
     print()
     print("Saved comparison plot")
     print("-" * 50)
     print(comparison_plot)
+
+    print()
+    print("Saved CSV files")
+    print("-" * 50)
+    print(sweep_csv)
+    print(comparison_csv)
 
 
 if __name__ == "__main__":
