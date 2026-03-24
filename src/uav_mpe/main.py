@@ -66,6 +66,11 @@ from uav_mpe.mission_profile_export import (
     save_mission_profile_summary_to_csv,
 )
 
+from uav_mpe.mission_profile_plotting import (
+    plot_mission_energy_by_segment,
+    plot_remaining_energy_by_segment,
+)
+
 
 def main() -> None:
     config = load_config("configs/example_fixed_wing.yaml")
@@ -304,7 +309,22 @@ def main() -> None:
     print(mission_segments_csv)
     print(mission_summary_csv)
 
-    
+    mission_energy_plot = plot_mission_energy_by_segment(
+        mission_profile,
+        "outputs/mission_energy_by_segment.png",
+    )
+    remaining_energy_plot = plot_remaining_energy_by_segment(
+        mission_profile,
+        "outputs/remaining_energy_by_segment.png",
+    )
+
+    print()
+    print("Saved mission profile plots")
+    print("-" * 50)
+    print(mission_energy_plot)
+    print(remaining_energy_plot)
+
+
 
 
 if __name__ == "__main__":
