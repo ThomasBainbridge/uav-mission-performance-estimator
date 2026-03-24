@@ -59,6 +59,8 @@ def load_config(path: str | Path) -> Config:
         data = yaml.safe_load(f)
     return Config.model_validate(data)
 
+from uav_mpe.mission_profile import evaluate_simple_mission_profile
+
 
 def main() -> None:
     config = load_config("configs/example_fixed_wing.yaml")
@@ -254,6 +256,33 @@ def main() -> None:
     print()
     print("Best wind-adjusted range operating point:")
     print(best_wind_range_op)
+
+    print()
+    print("Version 2 mission profile")
+    print("-" * 50)
+
+    mission_profile = evaluate_simple_mission_profile(
+        config,
+        outbound_distance_km=25.0,
+        loiter_duration_min=15.0,
+        return_distance_km=25.0,
+        outbound_wind_speed_m_per_s=3.0,
+        return_wind_speed_m_per_s=-2.0,
+        cruise_mode="best_range",
+        max_speed_m_per_s=40.0,
+        num_points=120,
+    )
+
+    print(f"Mission feasible [-]: {mission_profile['mission_feasible']}")
+    print(f"Total mission time [h]: {mission_profile['total_time_h']:.3f}")
+    print(f"Total mission energy used [Wh]: {mission_profile['total_energy_used_wh']:.3f}")
+    print(f"Remaining energy [Wh]: {mission_profile['remaining_energy_wh']:.3f}")
+
+    print()
+    print("Mission profile segments")
+    print("-" * 50)
+    for segment in mission_profile["segments"]:
+        print(segment)
 
 
 if __name__ == "__main__":
