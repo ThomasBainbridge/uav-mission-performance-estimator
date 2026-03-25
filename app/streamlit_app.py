@@ -68,6 +68,11 @@ def dataframe_to_csv_bytes(df: pd.DataFrame) -> bytes:
     return df.to_csv(index=False).encode("utf-8")
 
 
+def config_to_yaml_bytes(config: Config) -> bytes:
+    config_dict = config.model_dump(mode="python")
+    return yaml.dump(config_dict, sort_keys=False).encode("utf-8")
+
+
 def mission_profile_summary_df(mission_profile: dict[str, object]) -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -206,7 +211,7 @@ st.set_page_config(
 )
 
 st.title("UAV Mission Performance Estimator")
-st.caption("Version 3.3 live Streamlit interface with editable mission and environment inputs.")
+st.caption("Version 3.4 live Streamlit interface with editable inputs and YAML/CSV downloads.")
 
 config_options = list_yaml_configs(str(CONFIG_DIR))
 
@@ -519,3 +524,10 @@ with tab5:
 
     st.subheader("Active configuration after sidebar edits")
     st.code(yaml.dump(config.model_dump(mode="python"), sort_keys=False), language="yaml")
+
+    st.download_button(
+        "Download active config YAML",
+        data=config_to_yaml_bytes(config),
+        file_name=f"{selected_stem}_edited.yaml",
+        mime="text/yaml",
+    )
