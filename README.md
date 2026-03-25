@@ -2,7 +2,7 @@
 
 A Python-based engineering tool for estimating fixed-wing UAV performance and mission-profile behaviour from preliminary design inputs.
 
-The project has been developed in stages, progressing from a core fixed-wing performance estimator to segmented mission-profile analysis and, most recently, a polished Streamlit front end for interactive trade studies.
+The project has been developed in stages, progressing from a core fixed-wing performance estimator to segmented mission-profile analysis, a polished Streamlit front end for interactive trade studies, and more realistic mission-phase modelling.
 
 ## Version Overview
 
@@ -55,6 +55,19 @@ It introduced:
 - reset-to-base-config workflow
 - clearer usability, layout, and assumptions/scope presentation
 
+### Version 4 – Extended Mission Modelling
+
+Version 4 improved the physical realism of the mission model by introducing additional mission phases and more flexible mission-definition options.
+
+It introduced:
+
+- climb segment modelling using climb altitude and climb rate
+- descent segment modelling using descent altitude, descent rate, and descent power factor
+- segment-specific altitude support for outbound, loiter, and return phases
+- reserve strategy options using either reserve fraction or fixed reserve energy
+- richer config-driven mission definitions for more realistic mission studies
+- backend mission-model extensions while keeping compatibility with the existing CLI and Streamlit workflows
+
 ## Example Outputs
 
 ### Power vs Airspeed
@@ -75,9 +88,14 @@ It introduced:
 ### Remaining Energy by Segment
 ![Remaining Energy by Segment](assets/screenshots/remaining-energy-by-segment.png)
 
-## How to Run
+## How to Run 
 
 Run the CLI version with a selected config file:
 
-```powershell
+
 py -m uav_mpe.main --config configs/example_fixed_wing.yaml
+
+
+Run the Streamlit app:
+
+streamlit run app/streamlit_app.py
