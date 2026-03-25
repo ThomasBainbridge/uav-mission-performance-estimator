@@ -7,6 +7,11 @@ from uav_mpe.climb import (
     climb_time_hours,
     climb_total_electrical_power_watts,
 )
+from uav_mpe.descent import (
+    descent_energy_wh,
+    descent_time_hours,
+    descent_total_electrical_power_watts,
+)
 from uav_mpe.models import Config
 from uav_mpe.operating_points import (
     get_best_endurance_operating_point,
@@ -57,6 +62,41 @@ def evaluate_climb_segment(
         "speed_mode": "fixed_climb",
         "climb_altitude_m": climb_altitude_m,
         "climb_rate_m_per_s": climb_rate_m_per_s,
+        "electrical_power_w": electrical_power_w,
+        "time_h": time_h,
+        "energy_used_wh": energy_used_wh,
+    }
+
+
+def evaluate_descent_segment(
+    config: Config,
+    segment_name: str,
+    descent_altitude_m: float,
+    descent_rate_m_per_s: float,
+    descent_power_factor: float,
+) -> dict[str, float | str]:
+    electrical_power_w = descent_total_electrical_power_watts(
+        config,
+        descent_power_factor=descent_power_factor,
+    )
+    time_h = descent_time_hours(
+        descent_altitude_m=descent_altitude_m,
+        descent_rate_m_per_s=descent_rate_m_per_s,
+    )
+    energy_used_wh = descent_energy_wh(
+        config,
+        descent_altitude_m=descent_altitude_m,
+        descent_rate_m_per_s=descent_rate_m_per_s,
+        descent_power_factor=descent_power_factor,
+    )
+
+    return {
+        "segment_name": segment_name,
+        "segment_type": "descent",
+        "speed_mode": "fixed_descent",
+        "descent_altitude_m": descent_altitude_m,
+        "descent_rate_m_per_s": descent_rate_m_per_s,
+        "descent_power_factor": descent_power_factor,
         "electrical_power_w": electrical_power_w,
         "time_h": time_h,
         "energy_used_wh": energy_used_wh,
@@ -233,6 +273,9 @@ def evaluate_simple_mission_profile(
     climb_rate_m_per_s: float | None = None,
     loiter_duration_min: float | None = None,
     return_distance_km: float | None = None,
+    descent_altitude_m: float | None = None,
+    descent_rate_m_per_s: float | None = None,
+    descent_power_factor: float = 0.7,
     outbound_wind_speed_m_per_s: float = 0.0,
     return_wind_speed_m_per_s: float = 0.0,
     cruise_mode: str = "best_range",
@@ -253,6 +296,11 @@ def evaluate_simple_mission_profile(
     if (climb_altitude_m is None) ^ (climb_rate_m_per_s is None):
         raise ValueError(
             "climb_altitude_m and climb_rate_m_per_s must both be provided, or both be None."
+        )
+
+    if (descent_altitude_m is None) ^ (descent_rate_m_per_s is None):
+        raise ValueError(
+            "descent_altitude_m and descent_rate_m_per_s must both be provided, or both be None."
         )
 
     def add_segment(segment: dict[str, float | str]) -> None:
@@ -351,6 +399,16 @@ def evaluate_simple_mission_profile(
             )
 
         add_segment(return_leg)
+
+    if descent_altitude_m is not None and descent_rate_m_per_s is not None:
+        descent_segment = evaluate_descent_segment(
+            config,
+            segment_name="descent",
+            descent_altitude_m=descent_altitude_m,
+            descent_rate_m_per_s=descent_rate_m_per_s,
+            descent_power_factor=descent_power_factor,
+        )
+        add_segment(descent_segment)
 
     total_time_h = 0.0
     total_energy_used_wh = 0.0

@@ -146,6 +146,7 @@ def test_extreme_headwind_can_make_segment_impossible():
     assert segment["time_h"] == float("inf")
     assert segment["energy_used_wh"] == float("inf")
 
+
 def test_simple_mission_profile_includes_climb_when_requested():
     config = make_test_config()
 
@@ -164,3 +165,26 @@ def test_simple_mission_profile_includes_climb_when_requested():
     )
 
     assert result["segments"][0]["segment_type"] == "climb"
+
+
+def test_simple_mission_profile_includes_descent_when_requested():
+    config = make_test_config()
+
+    result = evaluate_simple_mission_profile(
+        config,
+        outbound_distance_km=20.0,
+        climb_altitude_m=500.0,
+        climb_rate_m_per_s=2.0,
+        loiter_duration_min=10.0,
+        return_distance_km=20.0,
+        descent_altitude_m=500.0,
+        descent_rate_m_per_s=2.5,
+        descent_power_factor=0.7,
+        outbound_wind_speed_m_per_s=0.0,
+        return_wind_speed_m_per_s=0.0,
+        cruise_mode="best_range",
+        max_speed_m_per_s=40.0,
+        num_points=80,
+    )
+
+    assert result["segments"][-1]["segment_type"] == "descent"
