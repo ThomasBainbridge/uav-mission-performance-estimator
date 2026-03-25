@@ -205,13 +205,76 @@ def make_sweep_chart_df(sweep_df: pd.DataFrame, cols: list[str]) -> pd.DataFrame
     return sweep_df[["airspeed_m_per_s", *cols]].set_index("airspeed_m_per_s")
 
 
+def set_trade_study_parameter(config: Config, parameter_name: str, value: float) -> Config:
+    updated = config.model_copy(deep=True)
+
+    if parameter_name == "battery_mass_kg":
+        updated.aircraft.battery_mass_kg = value
+    elif parameter_name == "payload_mass_kg":
+        updated.aircraft.payload_mass_kg = value
+    elif parameter_name == "wing_area_m2":
+        updated.aircraft.wing_area_m2 = value
+    elif parameter_name == "cd0":
+        updated.aircraft.cd0 = value
+    elif parameter_name == "altitude_m":
+        updated.environment.altitude_m = value
+        updated.environment.air_density_kg_per_m3 = None
+    elif parameter_name == "cruise_speed_m_per_s":
+        updated.mission.cruise_speed_m_per_s = value
+    else:
+        raise ValueError(f"Unsupported trade study parameter: {parameter_name}")
+
+    return updated
+
+
+def build_trade_study_df(
+    base_config: Config,
+    parameter_name: str,
+    min_value: float,
+    max_value: float,
+    num_points: int,
+) -> pd.DataFrame:
+    values = pd.Series(
+        [min_value + i * (max_value - min_value) / (num_points - 1) for i in range(num_points)]
+    )
+
+    rows: list[dict[str, float]] = []
+
+    for value in values:
+        config = set_trade_study_parameter(base_config, parameter_name, float(value))
+        summary = make_performance_summary(config)
+        mission_profile = make_mission_profile_result(config)
+
+        remaining_energy_wh = float("nan")
+        mission_feasible_flag = float("nan")
+
+        if mission_profile is not None:
+            remaining_energy_wh = float(mission_profile["remaining_energy_wh"])
+            mission_feasible_flag = 1.0 if bool(mission_profile["mission_feasible"]) else 0.0
+
+        rows.append(
+            {
+                "parameter_value": float(value),
+                "still_air_range_km": summary["still_air_range_km"],
+                "wind_adjusted_range_km": summary["wind_adjusted_range_km"],
+                "endurance_h": summary["endurance_h"],
+                "stall_speed_m_per_s": summary["stall_speed_m_per_s"],
+                "electrical_power_required_w": summary["electrical_power_required_w"],
+                "remaining_energy_wh": remaining_energy_wh,
+                "mission_feasible_flag": mission_feasible_flag,
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
 st.set_page_config(
     page_title="UAV Mission Performance Estimator",
     layout="wide",
 )
 
 st.title("UAV Mission Performance Estimator")
-st.caption("Version 3.5 live Streamlit interface with editable aircraft, mission, and environment inputs.")
+st.caption("Version 3.6 live Streamlit interface with editable aircraft inputs and trade-study plots.")
 
 config_options = list_yaml_configs(str(CONFIG_DIR))
 
@@ -438,13 +501,14 @@ c6.metric("Endurance [h]", f"{summary['endurance_h']:.2f}")
 c7.metric("Still-air range [km]", f"{summary['still_air_range_km']:.1f}")
 c8.metric("Wind-adjusted range [km]", f"{summary['wind_adjusted_range_km']:.1f}")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
     [
         "Performance",
         "Operating points",
         "Mission",
         "Scenario comparison",
         "Config",
+        "Trade study",
     ]
 )
 
@@ -593,3 +657,110 @@ with tab5:
         file_name=f"{selected_stem}_edited.yaml",
         mime="text/yaml",
     )
+
+with tab6:
+    st.subheader("Trade study")
+
+    trade_parameter = st.selectbox(
+        "Parameter to sweep",
+        options=[
+            "battery_mass_kg",
+            "payload_mass_kg",
+            "wing_area_m2",
+            "cd0",
+            "altitude_m",
+            "cruise_speed_m_per_s",
+        ],
+    )
+
+    default_values = {
+        "battery_mass_kg": float(config.aircraft.battery_mass_kg),
+        "payload_mass_kg": float(config.aircraft.payload_mass_kg),
+        "wing_area_m2": float(config.aircraft.wing_area_m2),
+        "cd0": float(config.aircraft.cd0),
+        "altitude_m": float(config.environment.altitude_m or 0.0),
+        "cruise_speed_m_per_s": float(config.mission.cruise_speed_m_per_s),
+    }
+
+    default_value = default_values[trade_parameter]
+
+    if trade_parameter == "cd0":
+        min_default = max(0.001, 0.8 * default_value)
+        max_default = 1.2 * default_value
+        step_value = 0.001
+    elif trade_parameter == "altitude_m":
+        min_default = max(0.0, default_value)
+        max_default = max(1000.0, default_value + 3000.0)
+        step_value = 100.0
+    elif trade_parameter == "cruise_speed_m_per_s":
+        min_default = max(1.0, 0.7 * default_value)
+        max_default = 1.3 * default_value
+        step_value = 0.5
+    else:
+        min_default = max(0.1, 0.7 * default_value)
+        max_default = 1.3 * default_value
+        step_value = 0.1
+
+    trade_min = st.number_input(
+        "Minimum value",
+        value=float(min_default),
+        step=float(step_value),
+        key="trade_min",
+    )
+    trade_max = st.number_input(
+        "Maximum value",
+        value=float(max_default),
+        step=float(step_value),
+        key="trade_max",
+    )
+    trade_points = st.number_input(
+        "Number of points",
+        min_value=3,
+        max_value=100,
+        value=15,
+        step=1,
+    )
+
+    if trade_max <= trade_min:
+        st.error("Maximum value must be greater than minimum value.")
+    else:
+        trade_df = build_trade_study_df(
+            config,
+            parameter_name=trade_parameter,
+            min_value=float(trade_min),
+            max_value=float(trade_max),
+            num_points=int(trade_points),
+        )
+
+        st.dataframe(trade_df.round(3), use_container_width=True)
+        st.download_button(
+            "Download trade study CSV",
+            data=dataframe_to_csv_bytes(trade_df),
+            file_name=f"{selected_stem}_{trade_parameter}_trade_study.csv",
+            mime="text/csv",
+        )
+
+        st.markdown("**Range and endurance response**")
+        st.line_chart(
+            trade_df.set_index("parameter_value")[
+                ["still_air_range_km", "wind_adjusted_range_km", "endurance_h"]
+            ],
+            use_container_width=True,
+        )
+
+        st.markdown("**Stall speed and power response**")
+        st.line_chart(
+            trade_df.set_index("parameter_value")[
+                ["stall_speed_m_per_s", "electrical_power_required_w"]
+            ],
+            use_container_width=True,
+        )
+
+        if not trade_df["remaining_energy_wh"].isna().all():
+            st.markdown("**Mission response**")
+            st.line_chart(
+                trade_df.set_index("parameter_value")[
+                    ["remaining_energy_wh", "mission_feasible_flag"]
+                ],
+                use_container_width=True,
+            )
