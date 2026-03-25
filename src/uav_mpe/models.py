@@ -68,6 +68,7 @@ class MissionSegmentProfile(BaseModel):
 class Mission(BaseModel):
     usable_battery_fraction: float = Field(gt=0, le=1)
     reserve_fraction: float = Field(ge=0, lt=1)
+    reserve_energy_wh: float | None = Field(default=None, ge=0)
     cruise_speed_m_per_s: float = Field(gt=0)
     required_distance_km: float | None = Field(default=None, gt=0)
     profile: MissionSegmentProfile | None = None

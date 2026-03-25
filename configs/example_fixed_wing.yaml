@@ -18,6 +18,7 @@ environment:
 mission:
   usable_battery_fraction: 0.85
   reserve_fraction: 0.10
+  reserve_energy_wh: 30.0
   cruise_speed_m_per_s: 20.0
   required_distance_km: 100.0
   profile:

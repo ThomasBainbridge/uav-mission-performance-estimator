@@ -8,11 +8,18 @@ from uav_mpe.mission import (
     required_mission_time_hours,
 )
 from uav_mpe.models import Aircraft, Config, Environment, Mission
+from uav_mpe.performance import (
+    battery_available_for_mission_wh,
+    battery_usable_energy_wh,
+    reserve_energy_wh,
+)
 
 
 def make_test_config(
     required_distance_km: float | None = None,
     wind_speed_m_per_s: float = 0.0,
+    reserve_fraction: float = 0.10,
+    reserve_energy_override_wh: float | None = None,
 ) -> Config:
     return Config(
         aircraft=Aircraft(
@@ -34,7 +41,8 @@ def make_test_config(
         ),
         mission=Mission(
             usable_battery_fraction=0.85,
-            reserve_fraction=0.10,
+            reserve_fraction=reserve_fraction,
+            reserve_energy_wh=reserve_energy_override_wh,
             cruise_speed_m_per_s=20.0,
             required_distance_km=required_distance_km,
         ),
@@ -77,3 +85,42 @@ def test_missing_required_distance_raises_error():
 
     with pytest.raises(ValueError):
         required_mission_time_hours(config)
+
+
+def test_reserve_energy_uses_fraction_when_fixed_reserve_not_given():
+    config = make_test_config(
+        required_distance_km=100.0,
+        reserve_fraction=0.10,
+        reserve_energy_override_wh=None,
+    )
+    usable = battery_usable_energy_wh(config)
+    assert reserve_energy_wh(config) == pytest.approx(0.10 * usable)
+
+
+def test_reserve_energy_uses_fixed_value_when_given():
+    config = make_test_config(
+        required_distance_km=100.0,
+        reserve_fraction=0.10,
+        reserve_energy_override_wh=25.0,
+    )
+    assert reserve_energy_wh(config) == pytest.approx(25.0)
+
+
+def test_battery_available_for_mission_uses_fixed_reserve():
+    config = make_test_config(
+        required_distance_km=100.0,
+        reserve_fraction=0.10,
+        reserve_energy_override_wh=25.0,
+    )
+    usable = battery_usable_energy_wh(config)
+    assert battery_available_for_mission_wh(config) == pytest.approx(usable - 25.0)
+
+
+def test_fixed_reserve_cannot_exceed_usable_energy():
+    config = make_test_config(
+        required_distance_km=100.0,
+        reserve_fraction=0.10,
+        reserve_energy_override_wh=1e6,
+    )
+    with pytest.raises(ValueError):
+        reserve_energy_wh(config)

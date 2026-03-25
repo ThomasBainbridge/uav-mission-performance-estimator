@@ -24,9 +24,9 @@ def battery_usable_energy_wh(config: Config) -> float:
 
 
 def battery_available_for_mission_wh(config: Config) -> float:
-    usable = battery_usable_energy_wh(config)
-    reserve_fraction = config.mission.reserve_fraction
-    return usable * (1.0 - reserve_fraction)
+    usable_energy_wh = battery_usable_energy_wh(config)
+    reserve_wh = reserve_energy_wh(config)
+    return usable_energy_wh - reserve_wh
 
 
 def battery_available_for_mission_j(config: Config) -> float:
@@ -131,3 +131,14 @@ def wind_adjusted_range_m(config: Config) -> float:
 
 def wind_adjusted_range_km(config: Config) -> float:
     return wind_adjusted_range_m(config) / 1000.0
+
+def reserve_energy_wh(config: Config) -> float:
+    usable_energy_wh = battery_usable_energy_wh(config)
+
+    if config.mission.reserve_energy_wh is not None:
+        reserve_wh = config.mission.reserve_energy_wh
+        if reserve_wh > usable_energy_wh:
+            raise ValueError("reserve_energy_wh cannot exceed usable battery energy.")
+        return reserve_wh
+
+    return usable_energy_wh * config.mission.reserve_fraction
