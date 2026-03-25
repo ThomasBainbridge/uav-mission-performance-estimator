@@ -2,7 +2,7 @@
 
 A Python-based engineering tool for estimating fixed-wing UAV performance and mission-profile behaviour from preliminary design inputs.
 
-The project has been developed in stages, progressing from a core fixed-wing performance estimator to segmented mission-profile analysis and, most recently, a lightweight Streamlit front end.
+The project has been developed in stages, progressing from a core fixed-wing performance estimator to segmented mission-profile analysis and, most recently, a polished Streamlit front end for interactive trade studies.
 
 ## Version Overview
 
@@ -38,18 +38,22 @@ It introduced:
 - CLI config selection
 - mission scenario comparison across multiple YAML cases
 
-### Version 3 – Streamlit Front End
+### Version 3 – Interactive Streamlit Application
 
-Version 3 added a lightweight user-facing application layer on top of the existing analysis engine.
+Version 3 added a user-facing application layer on top of the existing analysis engine and was later polished into a more complete engineering trade-study tool.
 
 It introduced:
 
-- a Streamlit interface for selecting YAML config files
-- browser-based display of performance summary metrics
-- operating point inspection
-- mission feasibility and segmented mission-profile display
-- mission scenario and configuration comparison in a simple UI
-- a more accessible workflow without editing source code directly
+- a live Streamlit interface for loading YAML-based cases
+- editable aircraft, mission, and environment inputs directly in the UI
+- live performance, mission, and comparison charts
+- CSV downloads for sweeps, mission summaries, scenario comparisons, and trade studies
+- YAML download for edited active configurations
+- saved scenario creation directly into the `configs/` folder
+- saved-scenario comparison inside the app
+- trade-study / sensitivity plots for key design parameters
+- reset-to-base-config workflow
+- clearer usability, layout, and assumptions/scope presentation
 
 ## Example Outputs
 
@@ -77,18 +81,3 @@ Run the CLI version with a selected config file:
 
 ```powershell
 py -m uav_mpe.main --config configs/example_fixed_wing.yaml
-
-## Project Structure
-
-```text
-uav-mission-performance-estimator/
-├─ app/
-│  └─ streamlit_app.py
-├─ assets/screenshots/
-├─ configs/
-├─ outputs/
-├─ src/uav_mpe/
-├─ tests/
-├─ README.md
-├─ pyproject.toml
-└─ .gitignore
