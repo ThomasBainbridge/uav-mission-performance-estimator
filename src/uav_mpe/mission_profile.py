@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from math import isfinite
 
+from uav_mpe.climb import (
+    climb_energy_wh,
+    climb_time_hours,
+    climb_total_electrical_power_watts,
+)
 from uav_mpe.models import Config
 from uav_mpe.operating_points import (
     get_best_endurance_operating_point,
@@ -24,6 +29,38 @@ def _config_with_flight_conditions(
     updated.mission.cruise_speed_m_per_s = airspeed_m_per_s
     updated.environment.wind_speed_m_per_s = wind_speed_m_per_s
     return updated
+
+
+def evaluate_climb_segment(
+    config: Config,
+    segment_name: str,
+    climb_altitude_m: float,
+    climb_rate_m_per_s: float,
+) -> dict[str, float | str]:
+    electrical_power_w = climb_total_electrical_power_watts(
+        config,
+        climb_rate_m_per_s=climb_rate_m_per_s,
+    )
+    time_h = climb_time_hours(
+        climb_altitude_m=climb_altitude_m,
+        climb_rate_m_per_s=climb_rate_m_per_s,
+    )
+    energy_used_wh = climb_energy_wh(
+        config,
+        climb_altitude_m=climb_altitude_m,
+        climb_rate_m_per_s=climb_rate_m_per_s,
+    )
+
+    return {
+        "segment_name": segment_name,
+        "segment_type": "climb",
+        "speed_mode": "fixed_climb",
+        "climb_altitude_m": climb_altitude_m,
+        "climb_rate_m_per_s": climb_rate_m_per_s,
+        "electrical_power_w": electrical_power_w,
+        "time_h": time_h,
+        "energy_used_wh": energy_used_wh,
+    }
 
 
 def evaluate_cruise_segment_fixed_speed(
@@ -192,6 +229,8 @@ def evaluate_loiter_segment_best_endurance(
 def evaluate_simple_mission_profile(
     config: Config,
     outbound_distance_km: float,
+    climb_altitude_m: float | None = None,
+    climb_rate_m_per_s: float | None = None,
     loiter_duration_min: float | None = None,
     return_distance_km: float | None = None,
     outbound_wind_speed_m_per_s: float = 0.0,
@@ -211,6 +250,11 @@ def evaluate_simple_mission_profile(
     remaining_energy_wh = available_energy_wh
     segments: list[dict[str, float | str]] = []
 
+    if (climb_altitude_m is None) ^ (climb_rate_m_per_s is None):
+        raise ValueError(
+            "climb_altitude_m and climb_rate_m_per_s must both be provided, or both be None."
+        )
+
     def add_segment(segment: dict[str, float | str]) -> None:
         nonlocal remaining_energy_wh
 
@@ -226,6 +270,15 @@ def evaluate_simple_mission_profile(
 
         segment["remaining_energy_wh_after_segment"] = remaining_energy_wh
         segments.append(segment)
+
+    if climb_altitude_m is not None and climb_rate_m_per_s is not None:
+        climb_segment = evaluate_climb_segment(
+            config,
+            segment_name="climb",
+            climb_altitude_m=climb_altitude_m,
+            climb_rate_m_per_s=climb_rate_m_per_s,
+        )
+        add_segment(climb_segment)
 
     if cruise_mode == "fixed_speed":
         outbound = evaluate_cruise_segment_fixed_speed(
@@ -312,7 +365,11 @@ def evaluate_simple_mission_profile(
         total_time_h += segment_time_h
         total_energy_used_wh += segment_energy_wh
 
-    mission_feasible = isfinite(total_time_h) and isfinite(total_energy_used_wh) and remaining_energy_wh >= 0.0
+    mission_feasible = (
+        isfinite(total_time_h)
+        and isfinite(total_energy_used_wh)
+        and remaining_energy_wh >= 0.0
+    )
 
     return {
         "available_energy_wh": available_energy_wh,

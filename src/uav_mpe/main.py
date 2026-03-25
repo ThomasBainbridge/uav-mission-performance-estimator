@@ -22,6 +22,8 @@ from uav_mpe.mission_profile_plotting import (
     plot_mission_energy_by_segment,
     plot_remaining_energy_by_segment,
 )
+from uav_mpe.mission_scenario_comparison import compare_mission_scenarios
+from uav_mpe.mission_scenario_plotting import plot_mission_scenario_energy_balance
 from uav_mpe.models import Config
 from uav_mpe.operating_points import (
     get_best_endurance_operating_point,
@@ -63,9 +65,6 @@ from uav_mpe.sweeps import (
     best_wind_adjusted_range_row,
     build_speed_sweep,
 )
-
-from uav_mpe.mission_scenario_comparison import compare_mission_scenarios
-from uav_mpe.mission_scenario_plotting import plot_mission_scenario_energy_balance
 
 
 def parse_args() -> argparse.Namespace:
@@ -165,21 +164,19 @@ def main(config_path: str) -> None:
     print("Best wind-adjusted range operating point:")
     print(best_wind_range_op)
 
-    if config.mission.profile is not None:
+    profile = config.mission.profile
+
+    if profile is not None:
         print()
         print("Loaded mission profile from config")
         print("-" * 50)
-        print(config.mission.profile)
-
-        print()
-        print("Version 2 mission profile")
-        print("-" * 50)
-
-        profile = config.mission.profile
+        print(profile)
 
         mission_profile = evaluate_simple_mission_profile(
             config,
             outbound_distance_km=profile.outbound_distance_km,
+            climb_altitude_m=profile.climb_altitude_m,
+            climb_rate_m_per_s=profile.climb_rate_m_per_s,
             loiter_duration_min=profile.loiter_duration_min,
             return_distance_km=profile.return_distance_km,
             outbound_wind_speed_m_per_s=profile.outbound_wind_speed_m_per_s,
@@ -189,6 +186,9 @@ def main(config_path: str) -> None:
             num_points=120,
         )
 
+        print()
+        print("Version 2 mission profile")
+        print("-" * 50)
         print(f"Mission feasible [-]: {mission_profile['mission_feasible']}")
         print(f"Total mission time [h]: {mission_profile['total_time_h']:.3f}")
         print(f"Total mission energy used [Wh]: {mission_profile['total_energy_used_wh']:.3f}")
