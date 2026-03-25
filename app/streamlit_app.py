@@ -211,7 +211,7 @@ st.set_page_config(
 )
 
 st.title("UAV Mission Performance Estimator")
-st.caption("Version 3.4 live Streamlit interface with editable inputs and YAML/CSV downloads.")
+st.caption("Version 3.5 live Streamlit interface with editable aircraft, mission, and environment inputs.")
 
 config_options = list_yaml_configs(str(CONFIG_DIR))
 
@@ -224,6 +224,59 @@ working_config = base_config.model_copy(deep=True)
 
 with st.sidebar:
     st.header("Editable inputs")
+
+    st.subheader("Aircraft")
+    payload_mass_kg = st.number_input(
+        "Payload mass [kg]",
+        min_value=0.0,
+        value=float(base_config.aircraft.payload_mass_kg),
+        step=0.1,
+    )
+    battery_mass_kg = st.number_input(
+        "Battery mass [kg]",
+        min_value=0.1,
+        value=float(base_config.aircraft.battery_mass_kg),
+        step=0.1,
+    )
+    battery_specific_energy_wh_per_kg = st.number_input(
+        "Battery specific energy [Wh/kg]",
+        min_value=50.0,
+        value=float(base_config.aircraft.battery_specific_energy_wh_per_kg),
+        step=10.0,
+    )
+    wing_area_m2 = st.number_input(
+        "Wing area [m²]",
+        min_value=0.1,
+        value=float(base_config.aircraft.wing_area_m2),
+        step=0.05,
+    )
+    aspect_ratio = st.number_input(
+        "Aspect ratio [-]",
+        min_value=1.0,
+        value=float(base_config.aircraft.aspect_ratio),
+        step=0.5,
+    )
+    cd0 = st.number_input(
+        "Cd0 [-]",
+        min_value=0.001,
+        value=float(base_config.aircraft.cd0),
+        step=0.001,
+        format="%.3f",
+    )
+    cl_max = st.number_input(
+        "Cl_max [-]",
+        min_value=0.1,
+        value=float(base_config.aircraft.cl_max),
+        step=0.05,
+    )
+    eta_total = st.number_input(
+        "Total propulsion efficiency [-]",
+        min_value=0.05,
+        max_value=1.0,
+        value=float(base_config.aircraft.eta_total),
+        step=0.01,
+        format="%.2f",
+    )
 
     st.subheader("Environment")
     altitude_m = st.number_input(
@@ -331,6 +384,15 @@ with st.sidebar:
 if not run_app:
     st.info("Select a config, adjust any inputs in the sidebar, and click 'Run analysis'.")
     st.stop()
+
+working_config.aircraft.payload_mass_kg = float(payload_mass_kg)
+working_config.aircraft.battery_mass_kg = float(battery_mass_kg)
+working_config.aircraft.battery_specific_energy_wh_per_kg = float(battery_specific_energy_wh_per_kg)
+working_config.aircraft.wing_area_m2 = float(wing_area_m2)
+working_config.aircraft.aspect_ratio = float(aspect_ratio)
+working_config.aircraft.cd0 = float(cd0)
+working_config.aircraft.cl_max = float(cl_max)
+working_config.aircraft.eta_total = float(eta_total)
 
 working_config.environment.altitude_m = float(altitude_m)
 working_config.environment.air_density_kg_per_m3 = None
