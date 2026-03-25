@@ -299,7 +299,7 @@ st.set_page_config(
 )
 
 st.title("UAV Mission Performance Estimator")
-st.caption("Version 3.7 live Streamlit interface with scenario saving, editable inputs, downloads, and trade studies.")
+st.caption("Version 3.8 live Streamlit interface with saved-scenario comparison.")
 
 config_options = list_yaml_configs(str(CONFIG_DIR))
 
@@ -314,157 +314,46 @@ with st.sidebar:
     st.header("Editable inputs")
 
     st.subheader("Aircraft")
-    payload_mass_kg = st.number_input(
-        "Payload mass [kg]",
-        min_value=0.0,
-        value=float(base_config.aircraft.payload_mass_kg),
-        step=0.1,
-    )
-    battery_mass_kg = st.number_input(
-        "Battery mass [kg]",
-        min_value=0.1,
-        value=float(base_config.aircraft.battery_mass_kg),
-        step=0.1,
-    )
-    battery_specific_energy_wh_per_kg = st.number_input(
-        "Battery specific energy [Wh/kg]",
-        min_value=50.0,
-        value=float(base_config.aircraft.battery_specific_energy_wh_per_kg),
-        step=10.0,
-    )
-    wing_area_m2 = st.number_input(
-        "Wing area [m²]",
-        min_value=0.1,
-        value=float(base_config.aircraft.wing_area_m2),
-        step=0.05,
-    )
-    aspect_ratio = st.number_input(
-        "Aspect ratio [-]",
-        min_value=1.0,
-        value=float(base_config.aircraft.aspect_ratio),
-        step=0.5,
-    )
-    cd0 = st.number_input(
-        "Cd0 [-]",
-        min_value=0.001,
-        value=float(base_config.aircraft.cd0),
-        step=0.001,
-        format="%.3f",
-    )
-    cl_max = st.number_input(
-        "Cl_max [-]",
-        min_value=0.1,
-        value=float(base_config.aircraft.cl_max),
-        step=0.05,
-    )
-    eta_total = st.number_input(
-        "Total propulsion efficiency [-]",
-        min_value=0.05,
-        max_value=1.0,
-        value=float(base_config.aircraft.eta_total),
-        step=0.01,
-        format="%.2f",
-    )
+    payload_mass_kg = st.number_input("Payload mass [kg]", min_value=0.0, value=float(base_config.aircraft.payload_mass_kg), step=0.1)
+    battery_mass_kg = st.number_input("Battery mass [kg]", min_value=0.1, value=float(base_config.aircraft.battery_mass_kg), step=0.1)
+    battery_specific_energy_wh_per_kg = st.number_input("Battery specific energy [Wh/kg]", min_value=50.0, value=float(base_config.aircraft.battery_specific_energy_wh_per_kg), step=10.0)
+    wing_area_m2 = st.number_input("Wing area [m²]", min_value=0.1, value=float(base_config.aircraft.wing_area_m2), step=0.05)
+    aspect_ratio = st.number_input("Aspect ratio [-]", min_value=1.0, value=float(base_config.aircraft.aspect_ratio), step=0.5)
+    cd0 = st.number_input("Cd0 [-]", min_value=0.001, value=float(base_config.aircraft.cd0), step=0.001, format="%.3f")
+    cl_max = st.number_input("Cl_max [-]", min_value=0.1, value=float(base_config.aircraft.cl_max), step=0.05)
+    eta_total = st.number_input("Total propulsion efficiency [-]", min_value=0.05, max_value=1.0, value=float(base_config.aircraft.eta_total), step=0.01, format="%.2f")
 
     st.subheader("Environment")
-    altitude_m = st.number_input(
-        "Altitude [m]",
-        min_value=0.0,
-        value=float(base_config.environment.altitude_m or 0.0),
-        step=100.0,
-    )
-    general_wind_speed_m_per_s = st.number_input(
-        "General wind speed [m/s]",
-        value=float(base_config.environment.wind_speed_m_per_s),
-        step=1.0,
-    )
+    altitude_m = st.number_input("Altitude [m]", min_value=0.0, value=float(base_config.environment.altitude_m or 0.0), step=100.0)
+    general_wind_speed_m_per_s = st.number_input("General wind speed [m/s]", value=float(base_config.environment.wind_speed_m_per_s), step=1.0)
 
     st.subheader("Mission")
-    cruise_speed_m_per_s = st.number_input(
-        "Cruise speed [m/s]",
-        min_value=1.0,
-        value=float(base_config.mission.cruise_speed_m_per_s),
-        step=0.5,
-    )
+    cruise_speed_m_per_s = st.number_input("Cruise speed [m/s]", min_value=1.0, value=float(base_config.mission.cruise_speed_m_per_s), step=0.5)
 
-    use_required_distance = st.checkbox(
-        "Use required mission distance",
-        value=base_config.mission.required_distance_km is not None,
-    )
-    required_distance_default = (
-        float(base_config.mission.required_distance_km)
-        if base_config.mission.required_distance_km is not None
-        else 100.0
-    )
-    required_distance_km = st.number_input(
-        "Required mission distance [km]",
-        min_value=1.0,
-        value=required_distance_default,
-        step=5.0,
-        disabled=not use_required_distance,
-    )
+    use_required_distance = st.checkbox("Use required mission distance", value=base_config.mission.required_distance_km is not None)
+    required_distance_default = float(base_config.mission.required_distance_km) if base_config.mission.required_distance_km is not None else 100.0
+    required_distance_km = st.number_input("Required mission distance [km]", min_value=1.0, value=required_distance_default, step=5.0, disabled=not use_required_distance)
 
     if working_config.mission.profile is not None:
         st.subheader("Mission profile")
 
-        outbound_distance_km = st.number_input(
-            "Outbound distance [km]",
-            min_value=1.0,
-            value=float(working_config.mission.profile.outbound_distance_km),
-            step=1.0,
-        )
+        outbound_distance_km = st.number_input("Outbound distance [km]", min_value=1.0, value=float(working_config.mission.profile.outbound_distance_km), step=1.0)
 
-        use_loiter = st.checkbox(
-            "Use loiter segment",
-            value=working_config.mission.profile.loiter_duration_min is not None,
-        )
-        loiter_default = (
-            float(working_config.mission.profile.loiter_duration_min)
-            if working_config.mission.profile.loiter_duration_min is not None
-            else 15.0
-        )
-        loiter_duration_min = st.number_input(
-            "Loiter duration [min]",
-            min_value=1.0,
-            value=loiter_default,
-            step=5.0,
-            disabled=not use_loiter,
-        )
+        use_loiter = st.checkbox("Use loiter segment", value=working_config.mission.profile.loiter_duration_min is not None)
+        loiter_default = float(working_config.mission.profile.loiter_duration_min) if working_config.mission.profile.loiter_duration_min is not None else 15.0
+        loiter_duration_min = st.number_input("Loiter duration [min]", min_value=1.0, value=loiter_default, step=5.0, disabled=not use_loiter)
 
-        use_return = st.checkbox(
-            "Use return segment",
-            value=working_config.mission.profile.return_distance_km is not None,
-        )
-        return_default = (
-            float(working_config.mission.profile.return_distance_km)
-            if working_config.mission.profile.return_distance_km is not None
-            else 25.0
-        )
-        return_distance_km = st.number_input(
-            "Return distance [km]",
-            min_value=1.0,
-            value=return_default,
-            step=1.0,
-            disabled=not use_return,
-        )
+        use_return = st.checkbox("Use return segment", value=working_config.mission.profile.return_distance_km is not None)
+        return_default = float(working_config.mission.profile.return_distance_km) if working_config.mission.profile.return_distance_km is not None else 25.0
+        return_distance_km = st.number_input("Return distance [km]", min_value=1.0, value=return_default, step=1.0, disabled=not use_return)
 
-        outbound_wind_speed_m_per_s = st.number_input(
-            "Outbound segment wind [m/s]",
-            value=float(working_config.mission.profile.outbound_wind_speed_m_per_s),
-            step=1.0,
-        )
-        return_wind_speed_m_per_s = st.number_input(
-            "Return segment wind [m/s]",
-            value=float(working_config.mission.profile.return_wind_speed_m_per_s),
-            step=1.0,
-        )
+        outbound_wind_speed_m_per_s = st.number_input("Outbound segment wind [m/s]", value=float(working_config.mission.profile.outbound_wind_speed_m_per_s), step=1.0)
+        return_wind_speed_m_per_s = st.number_input("Return segment wind [m/s]", value=float(working_config.mission.profile.return_wind_speed_m_per_s), step=1.0)
 
         cruise_mode = st.selectbox(
             "Cruise mode",
             options=["fixed_speed", "best_range", "best_wind_adjusted_range"],
-            index=["fixed_speed", "best_range", "best_wind_adjusted_range"].index(
-                working_config.mission.profile.cruise_mode
-            ),
+            index=["fixed_speed", "best_range", "best_wind_adjusted_range"].index(working_config.mission.profile.cruise_mode),
         )
 
 working_config.aircraft.payload_mass_kg = float(payload_mass_kg)
@@ -481,18 +370,12 @@ working_config.environment.air_density_kg_per_m3 = None
 working_config.environment.wind_speed_m_per_s = float(general_wind_speed_m_per_s)
 
 working_config.mission.cruise_speed_m_per_s = float(cruise_speed_m_per_s)
-working_config.mission.required_distance_km = (
-    float(required_distance_km) if use_required_distance else None
-)
+working_config.mission.required_distance_km = float(required_distance_km) if use_required_distance else None
 
 if working_config.mission.profile is not None:
     working_config.mission.profile.outbound_distance_km = float(outbound_distance_km)
-    working_config.mission.profile.loiter_duration_min = (
-        float(loiter_duration_min) if use_loiter else None
-    )
-    working_config.mission.profile.return_distance_km = (
-        float(return_distance_km) if use_return else None
-    )
+    working_config.mission.profile.loiter_duration_min = float(loiter_duration_min) if use_loiter else None
+    working_config.mission.profile.return_distance_km = float(return_distance_km) if use_return else None
     working_config.mission.profile.outbound_wind_speed_m_per_s = float(outbound_wind_speed_m_per_s)
     working_config.mission.profile.return_wind_speed_m_per_s = float(return_wind_speed_m_per_s)
     working_config.mission.profile.cruise_mode = cruise_mode
@@ -520,12 +403,13 @@ c6.metric("Endurance [h]", f"{summary['endurance_h']:.2f}")
 c7.metric("Still-air range [km]", f"{summary['still_air_range_km']:.1f}")
 c8.metric("Wind-adjusted range [km]", f"{summary['wind_adjusted_range_km']:.1f}")
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
     [
         "Performance",
         "Operating points",
         "Mission",
         "Scenario comparison",
+        "Saved scenario comparison",
         "Config",
         "Trade study",
     ]
@@ -542,7 +426,6 @@ with tab1:
     )
 
     st.subheader("Live charts")
-
     st.markdown("**Power vs airspeed**")
     st.line_chart(
         make_sweep_chart_df(sweep_df, ["air_power_w", "electrical_power_w"]),
@@ -623,7 +506,7 @@ with tab3:
         st.info("No segmented mission profile is defined in this config.")
 
 with tab4:
-    st.subheader("Mission scenario comparison")
+    st.subheader("Default mission scenario comparison")
     scenario_df = compare_mission_scenarios(
         config_paths=MISSION_SCENARIO_FILES,
         max_speed_m_per_s=40.0,
@@ -664,6 +547,41 @@ with tab4:
     st.bar_chart(config_chart_df, use_container_width=True)
 
 with tab5:
+    st.subheader("Compare saved scenarios")
+
+    saved_config_options = list_yaml_configs(str(CONFIG_DIR))
+    selected_saved_configs = st.multiselect(
+        "Select saved YAML scenarios to compare",
+        options=saved_config_options,
+        default=[],
+    )
+
+    if len(selected_saved_configs) < 2:
+        st.info("Select at least two saved scenarios to compare.")
+    else:
+        saved_scenario_df = compare_mission_scenarios(
+            config_paths=selected_saved_configs,
+            max_speed_m_per_s=40.0,
+            num_points=120,
+        )
+
+        st.dataframe(saved_scenario_df.round(3), use_container_width=True)
+        st.download_button(
+            "Download saved scenario comparison CSV",
+            data=dataframe_to_csv_bytes(saved_scenario_df),
+            file_name="saved_scenario_comparison.csv",
+            mime="text/csv",
+        )
+
+        st.markdown("**Saved scenario energy balance**")
+        saved_chart_df = saved_scenario_df.set_index("scenario")[["total_energy_used_wh", "remaining_energy_wh"]]
+        st.bar_chart(saved_chart_df, use_container_width=True)
+
+        st.markdown("**Saved scenario mission time**")
+        saved_time_df = saved_scenario_df.set_index("scenario")[["total_time_h"]]
+        st.bar_chart(saved_time_df, use_container_width=True)
+
+with tab6:
     st.subheader("Base YAML")
     st.code(yaml.dump(load_config_dict(selected_config), sort_keys=False), language="yaml")
 
@@ -694,7 +612,7 @@ with tab5:
         except ValueError as exc:
             st.error(str(exc))
 
-with tab6:
+with tab7:
     st.subheader("Trade study")
 
     trade_parameter = st.selectbox(
@@ -737,25 +655,9 @@ with tab6:
         max_default = 1.3 * default_value
         step_value = 0.1
 
-    trade_min = st.number_input(
-        "Minimum value",
-        value=float(min_default),
-        step=float(step_value),
-        key="trade_min",
-    )
-    trade_max = st.number_input(
-        "Maximum value",
-        value=float(max_default),
-        step=float(step_value),
-        key="trade_max",
-    )
-    trade_points = st.number_input(
-        "Number of points",
-        min_value=3,
-        max_value=100,
-        value=15,
-        step=1,
-    )
+    trade_min = st.number_input("Minimum value", value=float(min_default), step=float(step_value), key="trade_min")
+    trade_max = st.number_input("Maximum value", value=float(max_default), step=float(step_value), key="trade_max")
+    trade_points = st.number_input("Number of points", min_value=3, max_value=100, value=15, step=1)
 
     if trade_max <= trade_min:
         st.error("Maximum value must be greater than minimum value.")
