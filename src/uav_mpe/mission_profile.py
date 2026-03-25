@@ -29,10 +29,16 @@ def _config_with_flight_conditions(
     config: Config,
     airspeed_m_per_s: float,
     wind_speed_m_per_s: float,
+    altitude_m: float | None = None,
 ) -> Config:
     updated = config.model_copy(deep=True)
     updated.mission.cruise_speed_m_per_s = airspeed_m_per_s
     updated.environment.wind_speed_m_per_s = wind_speed_m_per_s
+
+    if altitude_m is not None:
+        updated.environment.altitude_m = altitude_m
+        updated.environment.air_density_kg_per_m3 = None
+
     return updated
 
 
@@ -108,12 +114,14 @@ def evaluate_cruise_segment_fixed_speed(
     segment_name: str,
     distance_km: float,
     wind_speed_m_per_s: float = 0.0,
+    altitude_m: float | None = None,
 ) -> dict[str, float | str]:
     airspeed_m_per_s = config.mission.cruise_speed_m_per_s
     segment_config = _config_with_flight_conditions(
         config,
         airspeed_m_per_s=airspeed_m_per_s,
         wind_speed_m_per_s=wind_speed_m_per_s,
+        altitude_m=altitude_m,
     )
 
     electrical_power_w = electrical_power_required_watts(segment_config)
@@ -132,6 +140,7 @@ def evaluate_cruise_segment_fixed_speed(
         "segment_type": "cruise",
         "speed_mode": "fixed_speed",
         "distance_km": distance_km,
+        "altitude_m": altitude_m,
         "airspeed_m_per_s": airspeed_m_per_s,
         "ground_speed_m_per_s": ground_speed_m_per_s,
         "electrical_power_w": electrical_power_w,
@@ -145,11 +154,15 @@ def evaluate_cruise_segment_best_range(
     segment_name: str,
     distance_km: float,
     wind_speed_m_per_s: float = 0.0,
+    altitude_m: float | None = None,
     max_speed_m_per_s: float = 40.0,
     num_points: int = 100,
 ) -> dict[str, float | str]:
     config_for_selection = config.model_copy(deep=True)
     config_for_selection.environment.wind_speed_m_per_s = wind_speed_m_per_s
+    if altitude_m is not None:
+        config_for_selection.environment.altitude_m = altitude_m
+        config_for_selection.environment.air_density_kg_per_m3 = None
 
     op = get_best_range_operating_point(
         config_for_selection,
@@ -162,6 +175,7 @@ def evaluate_cruise_segment_best_range(
         config,
         airspeed_m_per_s=airspeed_m_per_s,
         wind_speed_m_per_s=wind_speed_m_per_s,
+        altitude_m=altitude_m,
     )
 
     electrical_power_w = electrical_power_required_watts(segment_config)
@@ -180,6 +194,7 @@ def evaluate_cruise_segment_best_range(
         "segment_type": "cruise",
         "speed_mode": "best_range",
         "distance_km": distance_km,
+        "altitude_m": altitude_m,
         "airspeed_m_per_s": airspeed_m_per_s,
         "ground_speed_m_per_s": ground_speed_m_per_s,
         "electrical_power_w": electrical_power_w,
@@ -193,11 +208,15 @@ def evaluate_cruise_segment_best_wind_adjusted_range(
     segment_name: str,
     distance_km: float,
     wind_speed_m_per_s: float = 0.0,
+    altitude_m: float | None = None,
     max_speed_m_per_s: float = 40.0,
     num_points: int = 100,
 ) -> dict[str, float | str]:
     config_for_selection = config.model_copy(deep=True)
     config_for_selection.environment.wind_speed_m_per_s = wind_speed_m_per_s
+    if altitude_m is not None:
+        config_for_selection.environment.altitude_m = altitude_m
+        config_for_selection.environment.air_density_kg_per_m3 = None
 
     op = get_best_wind_adjusted_range_operating_point(
         config_for_selection,
@@ -210,6 +229,7 @@ def evaluate_cruise_segment_best_wind_adjusted_range(
         config,
         airspeed_m_per_s=airspeed_m_per_s,
         wind_speed_m_per_s=wind_speed_m_per_s,
+        altitude_m=altitude_m,
     )
 
     electrical_power_w = electrical_power_required_watts(segment_config)
@@ -228,6 +248,7 @@ def evaluate_cruise_segment_best_wind_adjusted_range(
         "segment_type": "cruise",
         "speed_mode": "best_wind_adjusted_range",
         "distance_km": distance_km,
+        "altitude_m": altitude_m,
         "airspeed_m_per_s": airspeed_m_per_s,
         "ground_speed_m_per_s": ground_speed_m_per_s,
         "electrical_power_w": electrical_power_w,
@@ -240,11 +261,17 @@ def evaluate_loiter_segment_best_endurance(
     config: Config,
     segment_name: str,
     loiter_duration_min: float,
+    altitude_m: float | None = None,
     max_speed_m_per_s: float = 40.0,
     num_points: int = 100,
 ) -> dict[str, float | str]:
+    config_for_selection = config.model_copy(deep=True)
+    if altitude_m is not None:
+        config_for_selection.environment.altitude_m = altitude_m
+        config_for_selection.environment.air_density_kg_per_m3 = None
+
     op = get_best_endurance_operating_point(
-        config,
+        config_for_selection,
         max_speed_m_per_s=max_speed_m_per_s,
         num_points=num_points,
     )
@@ -259,6 +286,7 @@ def evaluate_loiter_segment_best_endurance(
         "segment_type": "loiter",
         "speed_mode": "best_endurance",
         "duration_min": loiter_duration_min,
+        "altitude_m": altitude_m,
         "airspeed_m_per_s": airspeed_m_per_s,
         "electrical_power_w": electrical_power_w,
         "time_h": time_h,
@@ -276,6 +304,9 @@ def evaluate_simple_mission_profile(
     descent_altitude_m: float | None = None,
     descent_rate_m_per_s: float | None = None,
     descent_power_factor: float = 0.7,
+    outbound_altitude_m: float | None = None,
+    loiter_altitude_m: float | None = None,
+    return_altitude_m: float | None = None,
     outbound_wind_speed_m_per_s: float = 0.0,
     return_wind_speed_m_per_s: float = 0.0,
     cruise_mode: str = "best_range",
@@ -334,6 +365,7 @@ def evaluate_simple_mission_profile(
             segment_name="outbound",
             distance_km=outbound_distance_km,
             wind_speed_m_per_s=outbound_wind_speed_m_per_s,
+            altitude_m=outbound_altitude_m,
         )
     elif cruise_mode == "best_range":
         outbound = evaluate_cruise_segment_best_range(
@@ -341,6 +373,7 @@ def evaluate_simple_mission_profile(
             segment_name="outbound",
             distance_km=outbound_distance_km,
             wind_speed_m_per_s=outbound_wind_speed_m_per_s,
+            altitude_m=outbound_altitude_m,
             max_speed_m_per_s=max_speed_m_per_s,
             num_points=num_points,
         )
@@ -350,6 +383,7 @@ def evaluate_simple_mission_profile(
             segment_name="outbound",
             distance_km=outbound_distance_km,
             wind_speed_m_per_s=outbound_wind_speed_m_per_s,
+            altitude_m=outbound_altitude_m,
             max_speed_m_per_s=max_speed_m_per_s,
             num_points=num_points,
         )
@@ -366,6 +400,7 @@ def evaluate_simple_mission_profile(
             config,
             segment_name="loiter",
             loiter_duration_min=loiter_duration_min,
+            altitude_m=loiter_altitude_m,
             max_speed_m_per_s=max_speed_m_per_s,
             num_points=num_points,
         )
@@ -378,6 +413,7 @@ def evaluate_simple_mission_profile(
                 segment_name="return",
                 distance_km=return_distance_km,
                 wind_speed_m_per_s=return_wind_speed_m_per_s,
+                altitude_m=return_altitude_m,
             )
         elif cruise_mode == "best_range":
             return_leg = evaluate_cruise_segment_best_range(
@@ -385,6 +421,7 @@ def evaluate_simple_mission_profile(
                 segment_name="return",
                 distance_km=return_distance_km,
                 wind_speed_m_per_s=return_wind_speed_m_per_s,
+                altitude_m=return_altitude_m,
                 max_speed_m_per_s=max_speed_m_per_s,
                 num_points=num_points,
             )
@@ -394,6 +431,7 @@ def evaluate_simple_mission_profile(
                 segment_name="return",
                 distance_km=return_distance_km,
                 wind_speed_m_per_s=return_wind_speed_m_per_s,
+                altitude_m=return_altitude_m,
                 max_speed_m_per_s=max_speed_m_per_s,
                 num_points=num_points,
             )

@@ -23,12 +23,20 @@ mission:
   profile:
     climb_altitude_m: 500.0
     climb_rate_m_per_s: 2.0
+
     outbound_distance_km: 25.0
+    outbound_altitude_m: 500.0
+
     loiter_duration_min: 15.0
+    loiter_altitude_m: 500.0
+
     return_distance_km: 25.0
+    return_altitude_m: 500.0
+
     descent_altitude_m: 500.0
     descent_rate_m_per_s: 2.5
     descent_power_factor: 0.7
+
     outbound_wind_speed_m_per_s: 3.0
     return_wind_speed_m_per_s: -2.0
     cruise_mode: best_range

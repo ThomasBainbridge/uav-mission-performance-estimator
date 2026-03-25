@@ -32,12 +32,20 @@ class Environment(BaseModel):
 class MissionSegmentProfile(BaseModel):
     climb_altitude_m: float | None = Field(default=None, ge=0)
     climb_rate_m_per_s: float | None = Field(default=None, gt=0)
+
     outbound_distance_km: float = Field(gt=0)
+    outbound_altitude_m: float | None = Field(default=None, ge=0)
+
     loiter_duration_min: float | None = Field(default=None, gt=0)
+    loiter_altitude_m: float | None = Field(default=None, ge=0)
+
     return_distance_km: float | None = Field(default=None, gt=0)
+    return_altitude_m: float | None = Field(default=None, ge=0)
+
     descent_altitude_m: float | None = Field(default=None, ge=0)
     descent_rate_m_per_s: float | None = Field(default=None, gt=0)
     descent_power_factor: float = Field(default=0.7, gt=0, le=1)
+
     outbound_wind_speed_m_per_s: float = 0.0
     return_wind_speed_m_per_s: float = 0.0
     cruise_mode: str = "best_range"
