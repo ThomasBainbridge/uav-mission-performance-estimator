@@ -32,6 +32,7 @@ from uav_mpe.performance import (
     electrical_power_required_watts,
     endurance_hours,
     minimum_recommended_cruise_speed_m_per_s,
+    reserve_energy_wh,
     stall_speed_m_per_s,
     still_air_range_km,
     total_mass_kg,
@@ -140,6 +141,7 @@ def make_performance_summary(config: Config) -> dict[str, float]:
         "minimum_recommended_cruise_speed_m_per_s": minimum_recommended_cruise_speed_m_per_s(config),
         "battery_nominal_energy_wh": battery_nominal_energy_wh(config),
         "battery_usable_energy_wh": battery_usable_energy_wh(config),
+        "reserve_energy_wh": reserve_energy_wh(config),
         "battery_available_for_mission_wh": battery_available_for_mission_wh(config),
         "electrical_power_required_w": electrical_power_required_watts(config),
         "air_power_required_w": air_power_required_watts(config),
@@ -183,8 +185,16 @@ def make_mission_profile_result(config: Config) -> dict[str, object] | None:
     return evaluate_simple_mission_profile(
         config,
         outbound_distance_km=profile.outbound_distance_km,
+        climb_altitude_m=profile.climb_altitude_m,
+        climb_rate_m_per_s=profile.climb_rate_m_per_s,
         loiter_duration_min=profile.loiter_duration_min,
         return_distance_km=profile.return_distance_km,
+        descent_altitude_m=profile.descent_altitude_m,
+        descent_rate_m_per_s=profile.descent_rate_m_per_s,
+        descent_power_factor=profile.descent_power_factor,
+        outbound_altitude_m=profile.outbound_altitude_m,
+        loiter_altitude_m=profile.loiter_altitude_m,
+        return_altitude_m=profile.return_altitude_m,
         outbound_wind_speed_m_per_s=profile.outbound_wind_speed_m_per_s,
         return_wind_speed_m_per_s=profile.return_wind_speed_m_per_s,
         cruise_mode=profile.cruise_mode,
@@ -288,11 +298,11 @@ def build_trade_study_df(
         summary = make_performance_summary(config)
         mission_profile = make_mission_profile_result(config)
 
-        remaining_energy_wh = float("nan")
+        remaining_energy_wh_value = float("nan")
         mission_feasible_flag = float("nan")
 
         if mission_profile is not None:
-            remaining_energy_wh = float(mission_profile["remaining_energy_wh"])
+            remaining_energy_wh_value = float(mission_profile["remaining_energy_wh"])
             mission_feasible_flag = 1.0 if bool(mission_profile["mission_feasible"]) else 0.0
 
         rows.append(
@@ -303,7 +313,7 @@ def build_trade_study_df(
                 "endurance_h": summary["endurance_h"],
                 "stall_speed_m_per_s": summary["stall_speed_m_per_s"],
                 "electrical_power_required_w": summary["electrical_power_required_w"],
-                "remaining_energy_wh": remaining_energy_wh,
+                "remaining_energy_wh": remaining_energy_wh_value,
                 "mission_feasible_flag": mission_feasible_flag,
             }
         )
@@ -329,21 +339,75 @@ def init_state_from_config(config: Config) -> None:
     st.session_state["required_distance_km"] = (
         float(config.mission.required_distance_km) if config.mission.required_distance_km is not None else 100.0
     )
+    st.session_state["reserve_fraction"] = float(config.mission.reserve_fraction)
+    st.session_state["use_fixed_reserve_energy"] = config.mission.reserve_energy_wh is not None
+    st.session_state["reserve_energy_wh"] = (
+        float(config.mission.reserve_energy_wh) if config.mission.reserve_energy_wh is not None else 25.0
+    )
 
     if config.mission.profile is not None:
+        st.session_state["climb_altitude_m"] = (
+            float(config.mission.profile.climb_altitude_m)
+            if config.mission.profile.climb_altitude_m is not None
+            else 500.0
+        )
+        st.session_state["climb_rate_m_per_s"] = (
+            float(config.mission.profile.climb_rate_m_per_s)
+            if config.mission.profile.climb_rate_m_per_s is not None
+            else 2.0
+        )
+        st.session_state["use_climb_segment"] = (
+            config.mission.profile.climb_altitude_m is not None
+            and config.mission.profile.climb_rate_m_per_s is not None
+        )
+
         st.session_state["outbound_distance_km"] = float(config.mission.profile.outbound_distance_km)
+        st.session_state["outbound_altitude_m"] = (
+            float(config.mission.profile.outbound_altitude_m)
+            if config.mission.profile.outbound_altitude_m is not None
+            else float(config.environment.altitude_m or 0.0)
+        )
+
         st.session_state["use_loiter"] = config.mission.profile.loiter_duration_min is not None
         st.session_state["loiter_duration_min"] = (
             float(config.mission.profile.loiter_duration_min)
             if config.mission.profile.loiter_duration_min is not None
             else 15.0
         )
+        st.session_state["loiter_altitude_m"] = (
+            float(config.mission.profile.loiter_altitude_m)
+            if config.mission.profile.loiter_altitude_m is not None
+            else float(config.environment.altitude_m or 0.0)
+        )
+
         st.session_state["use_return"] = config.mission.profile.return_distance_km is not None
         st.session_state["return_distance_km"] = (
             float(config.mission.profile.return_distance_km)
             if config.mission.profile.return_distance_km is not None
             else 25.0
         )
+        st.session_state["return_altitude_m"] = (
+            float(config.mission.profile.return_altitude_m)
+            if config.mission.profile.return_altitude_m is not None
+            else float(config.environment.altitude_m or 0.0)
+        )
+
+        st.session_state["use_descent_segment"] = (
+            config.mission.profile.descent_altitude_m is not None
+            and config.mission.profile.descent_rate_m_per_s is not None
+        )
+        st.session_state["descent_altitude_m"] = (
+            float(config.mission.profile.descent_altitude_m)
+            if config.mission.profile.descent_altitude_m is not None
+            else 500.0
+        )
+        st.session_state["descent_rate_m_per_s"] = (
+            float(config.mission.profile.descent_rate_m_per_s)
+            if config.mission.profile.descent_rate_m_per_s is not None
+            else 2.5
+        )
+        st.session_state["descent_power_factor"] = float(config.mission.profile.descent_power_factor)
+
         st.session_state["outbound_wind_speed_m_per_s"] = float(config.mission.profile.outbound_wind_speed_m_per_s)
         st.session_state["return_wind_speed_m_per_s"] = float(config.mission.profile.return_wind_speed_m_per_s)
         st.session_state["cruise_mode"] = config.mission.profile.cruise_mode
@@ -355,7 +419,7 @@ st.set_page_config(
 )
 
 st.title("UAV Mission Performance Estimator")
-st.caption("Version 3 polish: live analysis, editable inputs, downloads, saved-scenario comparison, and trade studies.")
+st.caption("Version 4 app sync: live analysis with extended mission modelling, saved-scenario comparison, and trade studies.")
 
 config_options = list_yaml_configs(str(CONFIG_DIR))
 
@@ -379,38 +443,57 @@ with st.sidebar:
     st.caption("Edits below affect the active case only until you save a named scenario.")
 
     st.subheader("Aircraft")
-    st.number_input("Payload mass [kg]", min_value=0.0, step=0.1, key="payload_mass_kg", help="Additional carried mass.")
-    st.number_input("Battery mass [kg]", min_value=0.1, step=0.1, key="battery_mass_kg", help="Battery mass affects both available energy and total aircraft mass.")
-    st.number_input("Battery specific energy [Wh/kg]", min_value=50.0, step=10.0, key="battery_specific_energy_wh_per_kg", help="Battery specific energy used to convert battery mass into stored energy.")
-    st.number_input("Wing area [m²]", min_value=0.1, step=0.05, key="wing_area_m2", help="Affects lift and stall speed.")
-    st.number_input("Aspect ratio [-]", min_value=1.0, step=0.5, key="aspect_ratio", help="Affects induced drag factor.")
-    st.number_input("Cd0 [-]", min_value=0.001, step=0.001, format="%.3f", key="cd0", help="Zero-lift drag coefficient.")
-    st.number_input("Cl_max [-]", min_value=0.1, step=0.05, key="cl_max", help="Used in stall-speed estimation.")
-    st.number_input("Total propulsion efficiency [-]", min_value=0.05, max_value=1.0, step=0.01, format="%.2f", key="eta_total", help="Lumps propulsive and electrical efficiency into a single factor.")
+    st.number_input("Payload mass [kg]", min_value=0.0, step=0.1, key="payload_mass_kg")
+    st.number_input("Battery mass [kg]", min_value=0.1, step=0.1, key="battery_mass_kg")
+    st.number_input("Battery specific energy [Wh/kg]", min_value=50.0, step=10.0, key="battery_specific_energy_wh_per_kg")
+    st.number_input("Wing area [m²]", min_value=0.1, step=0.05, key="wing_area_m2")
+    st.number_input("Aspect ratio [-]", min_value=1.0, step=0.5, key="aspect_ratio")
+    st.number_input("Cd0 [-]", min_value=0.001, step=0.001, format="%.3f", key="cd0")
+    st.number_input("Cl_max [-]", min_value=0.1, step=0.05, key="cl_max")
+    st.number_input("Total propulsion efficiency [-]", min_value=0.05, max_value=1.0, step=0.01, format="%.2f", key="eta_total")
 
     st.subheader("Environment")
-    st.number_input("Altitude [m]", min_value=0.0, step=100.0, key="altitude_m", help="Air density is resolved from ISA altitude in the current workflow.")
-    st.number_input("General wind speed [m/s]", step=1.0, key="general_wind_speed_m_per_s", help="Positive values act as headwind in the simple along-track model.")
+    st.number_input("Global/base altitude [m]", min_value=0.0, step=100.0, key="altitude_m", help="Used as the default altitude when a segment-specific altitude is not set.")
+    st.number_input("General wind speed [m/s]", step=1.0, key="general_wind_speed_m_per_s")
 
     st.subheader("Mission")
-    st.number_input("Cruise speed [m/s]", min_value=1.0, step=0.5, key="cruise_speed_m_per_s", help="Used for nominal single-point mission feasibility checks.")
+    st.number_input("Cruise speed [m/s]", min_value=1.0, step=0.5, key="cruise_speed_m_per_s")
     st.checkbox("Use required mission distance", key="use_required_distance")
     st.number_input("Required mission distance [km]", min_value=1.0, step=5.0, key="required_distance_km", disabled=not st.session_state["use_required_distance"])
 
+    st.number_input("Reserve fraction [-]", min_value=0.0, max_value=0.95, step=0.01, format="%.2f", key="reserve_fraction")
+    st.checkbox("Use fixed reserve energy override", key="use_fixed_reserve_energy")
+    st.number_input("Reserve energy [Wh]", min_value=0.0, step=5.0, key="reserve_energy_wh", disabled=not st.session_state["use_fixed_reserve_energy"])
+
     if base_config.mission.profile is not None:
         st.subheader("Mission profile")
+
+        st.checkbox("Use climb segment", key="use_climb_segment")
+        st.number_input("Climb altitude [m]", min_value=0.0, step=100.0, key="climb_altitude_m", disabled=not st.session_state["use_climb_segment"])
+        st.number_input("Climb rate [m/s]", min_value=0.1, step=0.1, key="climb_rate_m_per_s", disabled=not st.session_state["use_climb_segment"])
+
         st.number_input("Outbound distance [km]", min_value=1.0, step=1.0, key="outbound_distance_km")
+        st.number_input("Outbound altitude [m]", min_value=0.0, step=100.0, key="outbound_altitude_m")
+        st.number_input("Outbound segment wind [m/s]", step=1.0, key="outbound_wind_speed_m_per_s")
+
         st.checkbox("Use loiter segment", key="use_loiter")
         st.number_input("Loiter duration [min]", min_value=1.0, step=5.0, key="loiter_duration_min", disabled=not st.session_state["use_loiter"])
+        st.number_input("Loiter altitude [m]", min_value=0.0, step=100.0, key="loiter_altitude_m")
+
         st.checkbox("Use return segment", key="use_return")
         st.number_input("Return distance [km]", min_value=1.0, step=1.0, key="return_distance_km", disabled=not st.session_state["use_return"])
-        st.number_input("Outbound segment wind [m/s]", step=1.0, key="outbound_wind_speed_m_per_s")
+        st.number_input("Return altitude [m]", min_value=0.0, step=100.0, key="return_altitude_m")
         st.number_input("Return segment wind [m/s]", step=1.0, key="return_wind_speed_m_per_s")
+
+        st.checkbox("Use descent segment", key="use_descent_segment")
+        st.number_input("Descent altitude [m]", min_value=0.0, step=100.0, key="descent_altitude_m", disabled=not st.session_state["use_descent_segment"])
+        st.number_input("Descent rate [m/s]", min_value=0.1, step=0.1, key="descent_rate_m_per_s", disabled=not st.session_state["use_descent_segment"])
+        st.number_input("Descent power factor [-]", min_value=0.05, max_value=1.0, step=0.05, format="%.2f", key="descent_power_factor", disabled=not st.session_state["use_descent_segment"])
+
         st.selectbox(
             "Cruise mode",
             options=["fixed_speed", "best_range", "best_wind_adjusted_range"],
             key="cruise_mode",
-            help="Operating-speed strategy for cruise segments.",
         )
 
 working_config = base_config.model_copy(deep=True)
@@ -432,15 +515,40 @@ working_config.mission.cruise_speed_m_per_s = float(st.session_state["cruise_spe
 working_config.mission.required_distance_km = (
     float(st.session_state["required_distance_km"]) if st.session_state["use_required_distance"] else None
 )
+working_config.mission.reserve_fraction = float(st.session_state["reserve_fraction"])
+working_config.mission.reserve_energy_wh = (
+    float(st.session_state["reserve_energy_wh"]) if st.session_state["use_fixed_reserve_energy"] else None
+)
 
 if working_config.mission.profile is not None:
+    working_config.mission.profile.climb_altitude_m = (
+        float(st.session_state["climb_altitude_m"]) if st.session_state["use_climb_segment"] else None
+    )
+    working_config.mission.profile.climb_rate_m_per_s = (
+        float(st.session_state["climb_rate_m_per_s"]) if st.session_state["use_climb_segment"] else None
+    )
+
     working_config.mission.profile.outbound_distance_km = float(st.session_state["outbound_distance_km"])
+    working_config.mission.profile.outbound_altitude_m = float(st.session_state["outbound_altitude_m"])
+
     working_config.mission.profile.loiter_duration_min = (
         float(st.session_state["loiter_duration_min"]) if st.session_state["use_loiter"] else None
     )
+    working_config.mission.profile.loiter_altitude_m = float(st.session_state["loiter_altitude_m"])
+
     working_config.mission.profile.return_distance_km = (
         float(st.session_state["return_distance_km"]) if st.session_state["use_return"] else None
     )
+    working_config.mission.profile.return_altitude_m = float(st.session_state["return_altitude_m"])
+
+    working_config.mission.profile.descent_altitude_m = (
+        float(st.session_state["descent_altitude_m"]) if st.session_state["use_descent_segment"] else None
+    )
+    working_config.mission.profile.descent_rate_m_per_s = (
+        float(st.session_state["descent_rate_m_per_s"]) if st.session_state["use_descent_segment"] else None
+    )
+    working_config.mission.profile.descent_power_factor = float(st.session_state["descent_power_factor"])
+
     working_config.mission.profile.outbound_wind_speed_m_per_s = float(st.session_state["outbound_wind_speed_m_per_s"])
     working_config.mission.profile.return_wind_speed_m_per_s = float(st.session_state["return_wind_speed_m_per_s"])
     working_config.mission.profile.cruise_mode = st.session_state["cruise_mode"]
@@ -469,8 +577,9 @@ with top2:
 - Simple drag-polar approach  
 - Along-track wind treatment only  
 - ISA altitude-based density option  
-- Segmented missions currently focused on outbound / loiter / return  
-- This is a preliminary engineering tool, not a high-fidelity flight dynamics solver
+- Segmented missions can now include climb, cruise, loiter, return, and descent  
+- Reserve can be defined by fraction or fixed energy  
+- This remains a preliminary engineering tool, not a high-fidelity flight dynamics solver
 """
         )
 
@@ -485,6 +594,11 @@ m5.metric("Electrical power [W]", f"{summary['electrical_power_required_w']:.1f}
 m6.metric("Endurance [h]", f"{summary['endurance_h']:.2f}")
 m7.metric("Still-air range [km]", f"{summary['still_air_range_km']:.1f}")
 m8.metric("Wind-adjusted range [km]", f"{summary['wind_adjusted_range_km']:.1f}")
+
+m9, m10, m11 = st.columns(3)
+m9.metric("Usable battery energy [Wh]", f"{summary['battery_usable_energy_wh']:.1f}")
+m10.metric("Reserve energy [Wh]", f"{summary['reserve_energy_wh']:.1f}")
+m11.metric("Available mission energy [Wh]", f"{summary['battery_available_for_mission_wh']:.1f}")
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
     [
@@ -634,7 +748,6 @@ with tab5:
         "Select saved YAML scenarios to compare",
         options=saved_config_options,
         default=[],
-        help="Select at least two YAML files from the configs folder.",
     )
 
     if len(selected_saved_configs) < 2:
