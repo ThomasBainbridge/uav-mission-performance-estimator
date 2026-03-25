@@ -12,6 +12,9 @@ class Aircraft(BaseModel):
     cd0: float = Field(gt=0)
     cl_max: float = Field(gt=0)
     eta_total: float = Field(gt=0, le=1)
+    hotel_load_w: float = Field(default=0.0, ge=0)
+    payload_load_w: float = Field(default=0.0, ge=0)
+    loiter_payload_load_w: float | None = Field(default=None, ge=0)
 
 
 class Environment(BaseModel):

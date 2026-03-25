@@ -124,3 +124,4 @@ def test_large_headwind_cannot_produce_negative_ground_speed():
 
     assert wind_adjusted_ground_speed_m_per_s(config) == 0.0
     assert wind_adjusted_range_km(config) == 0.0
+

@@ -90,10 +90,8 @@ def air_power_required_watts(config: Config) -> float:
 
 
 def electrical_power_required_watts(config: Config) -> float:
-    air_power = air_power_required_watts(config)
-    eta_total = config.aircraft.eta_total
-
-    return air_power / eta_total
+    propulsion_electrical_power_w = air_power_required_watts(config) / config.aircraft.eta_total
+    return propulsion_electrical_power_w + non_propulsive_electrical_load_watts(config)
 
 
 def endurance_seconds(config: Config) -> float:
@@ -142,3 +140,14 @@ def reserve_energy_wh(config: Config) -> float:
         return reserve_wh
 
     return usable_energy_wh * config.mission.reserve_fraction
+
+def hotel_load_watts(config: Config) -> float:
+        return config.aircraft.hotel_load_w
+
+
+def payload_load_watts(config: Config) -> float:
+    return config.aircraft.payload_load_w
+
+
+def non_propulsive_electrical_load_watts(config: Config) -> float:
+    return hotel_load_watts(config) + payload_load_watts(config)

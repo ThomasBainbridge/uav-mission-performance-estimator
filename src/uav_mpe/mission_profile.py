@@ -266,9 +266,15 @@ def evaluate_loiter_segment_best_endurance(
     num_points: int = 100,
 ) -> dict[str, float | str]:
     config_for_selection = config.model_copy(deep=True)
+
     if altitude_m is not None:
         config_for_selection.environment.altitude_m = altitude_m
         config_for_selection.environment.air_density_kg_per_m3 = None
+
+    if config_for_selection.aircraft.loiter_payload_load_w is not None:
+        config_for_selection.aircraft.payload_load_w = (
+            config_for_selection.aircraft.loiter_payload_load_w
+        )
 
     op = get_best_endurance_operating_point(
         config_for_selection,

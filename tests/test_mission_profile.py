@@ -215,3 +215,19 @@ def test_simple_mission_profile_includes_descent_when_requested():
     assert result["segments"][1]["altitude_m"] == 500.0
     assert result["segments"][2]["altitude_m"] == 600.0
     assert result["segments"][3]["altitude_m"] == 400.0
+
+    def test_loiter_segment_can_use_loiter_payload_load():
+        config = make_test_config()
+    config.aircraft.hotel_load_w = 15.0
+    config.aircraft.payload_load_w = 10.0
+    config.aircraft.loiter_payload_load_w = 25.0
+
+    segment = evaluate_loiter_segment_best_endurance(
+        config,
+        segment_name="loiter",
+        loiter_duration_min=15.0,
+        max_speed_m_per_s=40.0,
+        num_points=80,
+    )
+
+    assert segment["electrical_power_w"] > 0.0
