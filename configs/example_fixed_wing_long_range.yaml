@@ -9,6 +9,8 @@ aircraft:
   cd0: 0.028
   cl_max: 1.4
   eta_total: 0.72
+  hotel_load_w: 10.0
+  payload_load_w: 6.0
 
 environment:
   air_density_kg_per_m3: 1.225
