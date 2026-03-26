@@ -7,6 +7,7 @@ from uav_mpe.descent import (
     descent_total_electrical_power_watts,
 )
 from uav_mpe.models import Aircraft, Config, Environment, Mission
+from uav_mpe.performance import air_power_required_watts, non_propulsive_electrical_load_watts
 
 
 def make_test_config() -> Config:
@@ -22,6 +23,8 @@ def make_test_config() -> Config:
             cd0=0.03,
             cl_max=1.4,
             eta_total=0.7,
+            hotel_load_w=15.0,
+            payload_load_w=10.0,
         ),
         environment=Environment(
             altitude_m=0.0,
@@ -53,3 +56,14 @@ def test_descent_power_is_positive():
 def test_descent_energy_is_positive():
     config = make_test_config()
     assert descent_energy_wh(config, 500.0, 2.5, 0.7) > 0.0
+
+
+def test_descent_power_scales_only_propulsion_component():
+    config = make_test_config()
+
+    propulsion_level_power_w = air_power_required_watts(config) / config.aircraft.eta_total
+    non_propulsive_power_w = non_propulsive_electrical_load_watts(config)
+
+    expected_power_w = 0.7 * propulsion_level_power_w + non_propulsive_power_w
+
+    assert descent_total_electrical_power_watts(config, 0.7) == pytest.approx(expected_power_w)

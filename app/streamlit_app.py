@@ -31,7 +31,10 @@ from uav_mpe.performance import (
     battery_usable_energy_wh,
     electrical_power_required_watts,
     endurance_hours,
+    hotel_load_watts,
     minimum_recommended_cruise_speed_m_per_s,
+    non_propulsive_electrical_load_watts,
+    payload_load_watts,
     reserve_energy_wh,
     stall_speed_m_per_s,
     still_air_range_km,
@@ -143,6 +146,9 @@ def make_performance_summary(config: Config) -> dict[str, float]:
         "battery_usable_energy_wh": battery_usable_energy_wh(config),
         "reserve_energy_wh": reserve_energy_wh(config),
         "battery_available_for_mission_wh": battery_available_for_mission_wh(config),
+        "hotel_load_w": hotel_load_watts(config),
+        "payload_load_w": payload_load_watts(config),
+        "non_propulsive_electrical_load_w": non_propulsive_electrical_load_watts(config),
         "electrical_power_required_w": electrical_power_required_watts(config),
         "air_power_required_w": air_power_required_watts(config),
         "endurance_h": endurance_hours(config),
@@ -330,6 +336,14 @@ def init_state_from_config(config: Config) -> None:
     st.session_state["cd0"] = float(config.aircraft.cd0)
     st.session_state["cl_max"] = float(config.aircraft.cl_max)
     st.session_state["eta_total"] = float(config.aircraft.eta_total)
+    st.session_state["hotel_load_w"] = float(config.aircraft.hotel_load_w)
+    st.session_state["payload_load_w"] = float(config.aircraft.payload_load_w)
+    st.session_state["use_loiter_payload_override"] = config.aircraft.loiter_payload_load_w is not None
+    st.session_state["loiter_payload_load_w"] = (
+        float(config.aircraft.loiter_payload_load_w)
+        if config.aircraft.loiter_payload_load_w is not None
+        else float(config.aircraft.payload_load_w)
+    )
 
     st.session_state["altitude_m"] = float(config.environment.altitude_m or 0.0)
     st.session_state["general_wind_speed_m_per_s"] = float(config.environment.wind_speed_m_per_s)
@@ -419,7 +433,7 @@ st.set_page_config(
 )
 
 st.title("UAV Mission Performance Estimator")
-st.caption("Version 4 app sync: live analysis with extended mission modelling, saved-scenario comparison, and trade studies.")
+
 
 config_options = list_yaml_configs(str(CONFIG_DIR))
 
@@ -451,6 +465,16 @@ with st.sidebar:
     st.number_input("Cd0 [-]", min_value=0.001, step=0.001, format="%.3f", key="cd0")
     st.number_input("Cl_max [-]", min_value=0.1, step=0.05, key="cl_max")
     st.number_input("Total propulsion efficiency [-]", min_value=0.05, max_value=1.0, step=0.01, format="%.2f", key="eta_total")
+    st.number_input("Hotel load [W]", min_value=0.0, step=1.0, key="hotel_load_w")
+    st.number_input("Payload load [W]", min_value=0.0, step=1.0, key="payload_load_w")
+    st.checkbox("Use loiter payload override", key="use_loiter_payload_override")
+    st.number_input(
+        "Loiter payload override [W]",
+        min_value=0.0,
+        step=1.0,
+        key="loiter_payload_load_w",
+        disabled=not st.session_state["use_loiter_payload_override"],
+    )
 
     st.subheader("Environment")
     st.number_input("Global/base altitude [m]", min_value=0.0, step=100.0, key="altitude_m", help="Used as the default altitude when a segment-specific altitude is not set.")
@@ -506,6 +530,13 @@ working_config.aircraft.aspect_ratio = float(st.session_state["aspect_ratio"])
 working_config.aircraft.cd0 = float(st.session_state["cd0"])
 working_config.aircraft.cl_max = float(st.session_state["cl_max"])
 working_config.aircraft.eta_total = float(st.session_state["eta_total"])
+working_config.aircraft.hotel_load_w = float(st.session_state["hotel_load_w"])
+working_config.aircraft.payload_load_w = float(st.session_state["payload_load_w"])
+working_config.aircraft.loiter_payload_load_w = (
+    float(st.session_state["loiter_payload_load_w"])
+    if st.session_state["use_loiter_payload_override"]
+    else None
+)
 
 working_config.environment.altitude_m = float(st.session_state["altitude_m"])
 working_config.environment.air_density_kg_per_m3 = None

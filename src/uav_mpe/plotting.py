@@ -38,6 +38,12 @@ def _add_speed_markers(
         )
 
 
+def _add_legend_if_needed(ax) -> None:
+    handles, labels = ax.get_legend_handles_labels()
+    if labels:
+        ax.legend()
+
+
 def plot_power_vs_speed(
     sweep_df: pd.DataFrame,
     output_path: str | Path,
@@ -60,7 +66,7 @@ def plot_power_vs_speed(
     ax.set_title("Power Required vs Airspeed")
     ax.set_ylim(bottom=0.0)
     ax.grid(True)
-    ax.legend()
+    _add_legend_if_needed(ax)
     fig.tight_layout()
     fig.savefig(path, dpi=300)
     plt.close(fig)
@@ -77,7 +83,11 @@ def plot_endurance_vs_speed(
     path = _prepare_output_path(output_path)
 
     fig, ax = plt.subplots(figsize=(8.5, 5.5))
-    ax.plot(sweep_df["airspeed_m_per_s"], sweep_df["endurance_h"])
+    ax.plot(
+        sweep_df["airspeed_m_per_s"],
+        sweep_df["endurance_h"],
+        label="Endurance",
+    )
     _add_speed_markers(ax, v_stall_m_per_s, v_min_recommended_m_per_s)
 
     ax.set_xlabel("Airspeed [m/s]")
@@ -85,7 +95,7 @@ def plot_endurance_vs_speed(
     ax.set_title("Endurance vs Airspeed")
     ax.set_ylim(bottom=0.0)
     ax.grid(True)
-    ax.legend()
+    _add_legend_if_needed(ax)
     fig.tight_layout()
     fig.savefig(path, dpi=300)
     plt.close(fig)
@@ -119,7 +129,7 @@ def plot_range_vs_speed(
     ax.set_title("Range vs Airspeed")
     ax.set_ylim(bottom=0.0)
     ax.grid(True)
-    ax.legend()
+    _add_legend_if_needed(ax)
     fig.tight_layout()
     fig.savefig(path, dpi=300)
     plt.close(fig)
@@ -158,7 +168,7 @@ def plot_comparison_ranges(
     ax.set_title("Configuration Comparison: Maximum Range")
     ax.set_ylim(bottom=0.0)
     ax.grid(True, axis="y")
-    ax.legend()
+    _add_legend_if_needed(ax)
     fig.tight_layout()
     fig.savefig(path, dpi=300)
     plt.close(fig)

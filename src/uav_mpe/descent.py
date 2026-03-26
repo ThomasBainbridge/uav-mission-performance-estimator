@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from uav_mpe.models import Config
-from uav_mpe.performance import electrical_power_required_watts
+from uav_mpe.performance import (
+    air_power_required_watts,
+    non_propulsive_electrical_load_watts,
+)
 
 
 def descent_time_seconds(descent_altitude_m: float, descent_rate_m_per_s: float) -> float:
@@ -23,8 +26,10 @@ def descent_total_electrical_power_watts(
     if descent_power_factor <= 0.0 or descent_power_factor > 1.0:
         raise ValueError("descent_power_factor must be in the interval (0, 1].")
 
-    level_power = electrical_power_required_watts(config)
-    return descent_power_factor * level_power
+    propulsion_level_power_w = air_power_required_watts(config) / config.aircraft.eta_total
+    non_propulsive_power_w = non_propulsive_electrical_load_watts(config)
+
+    return descent_power_factor * propulsion_level_power_w + non_propulsive_power_w
 
 
 def descent_energy_wh(

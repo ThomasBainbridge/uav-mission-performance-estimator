@@ -1,3 +1,5 @@
+import pytest
+
 from uav_mpe.mission_profile import (
     evaluate_cruise_segment_best_range,
     evaluate_cruise_segment_fixed_speed,
@@ -189,8 +191,9 @@ def test_simple_mission_profile_includes_descent_when_requested():
 
     assert result["segments"][-1]["segment_type"] == "descent"
 
-    def test_simple_mission_profile_accepts_segment_specific_altitudes():
-        config = make_test_config()
+
+def test_simple_mission_profile_accepts_segment_specific_altitudes():
+    config = make_test_config()
 
     result = evaluate_simple_mission_profile(
         config,
@@ -216,13 +219,14 @@ def test_simple_mission_profile_includes_descent_when_requested():
     assert result["segments"][2]["altitude_m"] == 600.0
     assert result["segments"][3]["altitude_m"] == 400.0
 
-    def test_loiter_segment_can_use_loiter_payload_load():
-        config = make_test_config()
+
+def test_loiter_segment_can_use_loiter_payload_load():
+    config = make_test_config()
     config.aircraft.hotel_load_w = 15.0
     config.aircraft.payload_load_w = 10.0
     config.aircraft.loiter_payload_load_w = 25.0
 
-    segment = evaluate_loiter_segment_best_endurance(
+    segment_with_override = evaluate_loiter_segment_best_endurance(
         config,
         segment_name="loiter",
         loiter_duration_min=15.0,
@@ -230,4 +234,14 @@ def test_simple_mission_profile_includes_descent_when_requested():
         num_points=80,
     )
 
-    assert segment["electrical_power_w"] > 0.0
+    config.aircraft.loiter_payload_load_w = None
+
+    segment_without_override = evaluate_loiter_segment_best_endurance(
+        config,
+        segment_name="loiter",
+        loiter_duration_min=15.0,
+        max_speed_m_per_s=40.0,
+        num_points=80,
+    )
+
+    assert segment_with_override["electrical_power_w"] > segment_without_override["electrical_power_w"]

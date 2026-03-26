@@ -9,7 +9,8 @@ dependencies = [
     "pandas",
     "pydantic",
     "pyyaml",
-    "matplotlib"
+    "matplotlib",
+    "streamlit"
 ]
 
 [tool.pytest.ini_options]
