@@ -68,25 +68,6 @@ It introduced:
 - richer config-driven mission definitions for more realistic mission studies
 - backend mission-model extensions while keeping compatibility with the existing CLI and Streamlit workflows
 
-## Example Outputs
-
-### Power vs Airspeed
-![Power vs Airspeed](assets/screenshots/power-vs-speed.png)
-
-### Endurance vs Airspeed
-![Endurance vs Airspeed](assets/screenshots/endurance-vs-speed.png)
-
-### Range vs Airspeed
-![Range vs Airspeed](assets/screenshots/range-vs-speed.png)
-
-### Configuration Comparison
-![Configuration Comparison](assets/screenshots/configuration-comparison.png)
-
-### Mission Energy by Segment
-![Mission Energy by Segment](assets/screenshots/mission-energy-by-segment.png)
-
-### Remaining Energy by Segment
-![Remaining Energy by Segment](assets/screenshots/remaining-energy-by-segment.png)
 
 ## How to Run 
 
