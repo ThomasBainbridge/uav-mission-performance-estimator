@@ -616,17 +616,38 @@ with st.sidebar:
     st.number_input("Cd0 [-]", min_value=0.001, step=0.001, format="%.3f", key="cd0")
     st.number_input("Cl_max [-]", min_value=0.1, step=0.05, key="cl_max")
     st.number_input("Total propulsion efficiency [-]", min_value=0.05, max_value=1.0, step=0.01, format="%.2f", key="eta_total")
-    st.number_input("Hotel load [W]", min_value=0.0, step=1.0, key="hotel_load_w")
-    st.number_input("Payload load [W]", min_value=0.0, step=1.0, key="payload_load_w")
-    st.checkbox("Use loiter payload override", key="use_loiter_payload_override")
+    st.caption(
+        "Total electrical power is treated as propulsion electrical power plus non-propulsive loads. "
+        "Hotel load represents onboard electronics and avionics. Payload load represents mission-system power demand."
+    )
+
+    st.number_input(
+        "Hotel load [W]",
+        min_value=0.0,
+        step=1.0,
+        key="hotel_load_w",
+        help="Continuous onboard electrical demand not used for propulsion, such as avionics, telemetry, sensors, and autopilot systems.",
+    )
+    st.number_input(
+        "Payload load [W]",
+        min_value=0.0,
+        step=1.0,
+        key="payload_load_w",
+        help="Electrical power drawn by the payload during normal mission operation.",
+    )
+    st.checkbox(
+        "Use loiter payload override",
+        key="use_loiter_payload_override",
+        help="When enabled, the loiter segment uses a different payload electrical load than the normal mission payload load.",
+    )
     st.number_input(
         "Loiter payload override [W]",
         min_value=0.0,
         step=1.0,
         key="loiter_payload_load_w",
         disabled=not st.session_state["use_loiter_payload_override"],
+        help="Payload electrical load used during loiter only when the override is enabled.",
     )
-
     st.subheader("Environment")
     st.number_input("Global/base altitude [m]", min_value=0.0, step=100.0, key="altitude_m", help="Used as the default altitude when a segment-specific altitude is not set.")
     st.number_input("General wind speed [m/s]", step=1.0, key="general_wind_speed_m_per_s")
@@ -799,13 +820,17 @@ with tab1:
 
     p1, p2, p3, p4 = st.columns(4)
     p1.metric("Air power [W]", f"{summary['air_power_required_w']:.1f}")
-    p2.metric("Propulsion electrical [W]", f"{summary['propulsion_electrical_power_required_w']:.1f}")
-    p3.metric("Non-propulsive electrical [W]", f"{summary['non_propulsive_electrical_load_w']:.1f}")
-    p4.metric("Total electrical [W]", f"{summary['electrical_power_required_w']:.1f}")
+    p2.metric("Propulsion electrical power [W]", f"{summary['propulsion_electrical_power_required_w']:.1f}")
+    p3.metric("Non-propulsive load [W]", f"{summary['non_propulsive_electrical_load_w']:.1f}")
+    p4.metric("Total electrical power [W]", f"{summary['electrical_power_required_w']:.1f}")
 
     p5, p6 = st.columns(2)
     p5.metric("Hotel load [W]", f"{summary['hotel_load_w']:.1f}")
     p6.metric("Payload load [W]", f"{summary['payload_load_w']:.1f}")
+
+    st.caption(
+        "Total electrical power = propulsion electrical power + hotel load + payload load."
+    )
 
     st.markdown("**Performance summary**")
     st.dataframe(performance_summary_df(summary).round(3), width="stretch")
@@ -898,6 +923,11 @@ with tab3:
         d2.metric("Hotel energy [Wh]", f"{float(mission_profile['total_hotel_energy_wh']):.2f}")
         d3.metric("Payload energy [Wh]", f"{float(mission_profile['total_payload_energy_wh']):.2f}")
         d4.metric("Non-propulsive energy [Wh]", f"{float(mission_profile['total_non_propulsive_energy_wh']):.2f}")
+
+        st.caption(
+            "Non-propulsive energy includes hotel and payload electrical demand. "
+            "If a loiter payload override is enabled, the loiter segment uses that payload load instead of the normal payload load."
+        )
 
         mission_summary_df = mission_profile_summary_df(mission_profile)
         segments_df = mission_profile_segments_df(mission_profile)
@@ -1022,6 +1052,9 @@ with tab4:
     )
 
     st.markdown("#### Configuration table")
+    st.caption(
+        "Nominal cruise electrical power is shown as propulsion electrical power plus non-propulsive electrical loads."
+    )
     st.dataframe(config_display_df.round(3), width="stretch")
     st.download_button(
         "Download configuration comparison CSV",
