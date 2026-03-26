@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # UAV Performance and Mission Analysis
+=======
+# UAV Performance and Mission Analysis 
+>>>>>>> b0133a120a29df38f2cd9c7882a003f712e64a7d
 
 A Python-based engineering tool for estimating fixed-wing UAV performance and mission-profile behaviour from preliminary design inputs.
 
