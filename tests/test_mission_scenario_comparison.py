@@ -20,6 +20,10 @@ def test_compare_mission_scenarios_returns_expected_columns():
         "available_energy_wh",
         "total_time_h",
         "total_energy_used_wh",
+        "total_propulsion_energy_wh",
+        "total_hotel_energy_wh",
+        "total_payload_energy_wh",
+        "total_non_propulsive_energy_wh",
         "remaining_energy_wh",
         "number_of_segments",
         "outbound_distance_km",
@@ -66,3 +70,5 @@ def test_compare_mission_scenarios_outputs_are_sensible():
     assert (df["total_time_h"] > 0.0).all()
     assert (df["total_energy_used_wh"] > 0.0).all()
     assert (df["number_of_segments"] >= 2).all()
+    assert (df["total_propulsion_energy_wh"] > 0.0).all()
+    assert (df["total_non_propulsive_energy_wh"] >= 0.0).all()

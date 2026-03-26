@@ -127,6 +127,10 @@ def mission_profile_summary_df(mission_profile: dict[str, object]) -> pd.DataFra
                 "available_energy_wh": float(mission_profile["available_energy_wh"]),
                 "total_time_h": float(mission_profile["total_time_h"]),
                 "total_energy_used_wh": float(mission_profile["total_energy_used_wh"]),
+                "total_propulsion_energy_wh": float(mission_profile["total_propulsion_energy_wh"]),
+                "total_hotel_energy_wh": float(mission_profile["total_hotel_energy_wh"]),
+                "total_payload_energy_wh": float(mission_profile["total_payload_energy_wh"]),
+                "total_non_propulsive_energy_wh": float(mission_profile["total_non_propulsive_energy_wh"]),
                 "remaining_energy_wh": float(mission_profile["remaining_energy_wh"]),
                 "mission_feasible": bool(mission_profile["mission_feasible"]),
                 "number_of_segments": len(mission_profile["segments"]),
@@ -230,15 +234,32 @@ def make_mission_energy_df(mission_profile: dict[str, object]) -> pd.DataFrame:
     if not isinstance(segments, list):
         raise TypeError("mission_profile['segments'] must be a list.")
 
-    return pd.DataFrame(
+    df = pd.DataFrame(
         {
             "segment_name": [str(segment["segment_name"]) for segment in segments],
             "energy_used_wh": [float(segment["energy_used_wh"]) for segment in segments],
+        }
+    )
+    return df.set_index("segment_name")
+
+
+def make_mission_energy_breakdown_df(mission_profile: dict[str, object]) -> pd.DataFrame:
+    segments = mission_profile["segments"]
+    if not isinstance(segments, list):
+        raise TypeError("mission_profile['segments'] must be a list.")
+
+    return pd.DataFrame(
+        {
+            "segment_name": [str(segment["segment_name"]) for segment in segments],
+            "propulsion_energy_wh": [float(segment["propulsion_energy_wh"]) for segment in segments],
+            "hotel_energy_wh": [float(segment["hotel_energy_wh"]) for segment in segments],
+            "payload_energy_wh": [float(segment["payload_energy_wh"]) for segment in segments],
         }
     ).set_index("segment_name")
 
 
 def make_remaining_energy_df(mission_profile: dict[str, object]) -> pd.DataFrame:
+    ...
     segments = mission_profile["segments"]
     if not isinstance(segments, list):
         raise TypeError("mission_profile['segments'] must be a list.")
@@ -701,6 +722,12 @@ with tab3:
         b2.metric("Total mission time [h]", f"{float(mission_profile['total_time_h']):.2f}")
         b3.metric("Remaining energy [Wh]", f"{float(mission_profile['remaining_energy_wh']):.2f}")
 
+        b4, b5, b6, b7 = st.columns(4)
+        b4.metric("Propulsion energy [Wh]", f"{float(mission_profile['total_propulsion_energy_wh']):.2f}")
+        b5.metric("Hotel energy [Wh]", f"{float(mission_profile['total_hotel_energy_wh']):.2f}")
+        b6.metric("Payload energy [Wh]", f"{float(mission_profile['total_payload_energy_wh']):.2f}")
+        b7.metric("Non-propulsive energy [Wh]", f"{float(mission_profile['total_non_propulsive_energy_wh']):.2f}")
+
         mission_summary_df = mission_profile_summary_df(mission_profile)
         segments_df = mission_profile_segments_df(mission_profile)
 
@@ -724,6 +751,9 @@ with tab3:
 
         st.markdown("**Mission energy by segment**")
         st.bar_chart(make_mission_energy_df(mission_profile), width="stretch")
+
+        st.markdown("**Mission energy breakdown by segment**")
+        st.bar_chart(make_mission_energy_breakdown_df(mission_profile), width="stretch")
 
         st.markdown("**Remaining energy by mission stage**")
         st.line_chart(make_remaining_energy_df(mission_profile), width="stretch")

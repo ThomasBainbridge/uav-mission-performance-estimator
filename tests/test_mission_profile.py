@@ -245,3 +245,64 @@ def test_loiter_segment_can_use_loiter_payload_load():
     )
 
     assert segment_with_override["electrical_power_w"] > segment_without_override["electrical_power_w"]
+    assert segment_with_override["payload_load_w"] == 25.0
+    assert segment_without_override["payload_load_w"] == 10.0
+
+
+def test_segment_energy_breakdown_is_internally_consistent():
+    config = make_test_config()
+    config.aircraft.hotel_load_w = 15.0
+    config.aircraft.payload_load_w = 10.0
+
+    segment = evaluate_cruise_segment_fixed_speed(
+        config,
+        segment_name="outbound",
+        distance_km=20.0,
+        wind_speed_m_per_s=0.0,
+    )
+
+    assert segment["electrical_power_w"] == pytest.approx(
+        segment["propulsion_electrical_power_w"] + segment["non_propulsive_electrical_load_w"]
+    )
+    assert segment["non_propulsive_electrical_load_w"] == pytest.approx(
+        segment["hotel_load_w"] + segment["payload_load_w"]
+    )
+    assert segment["energy_used_wh"] == pytest.approx(
+        segment["propulsion_energy_wh"] + segment["non_propulsive_energy_wh"]
+    )
+
+
+def test_mission_totals_match_sum_of_segment_energy_breakdowns():
+    config = make_test_config()
+    config.aircraft.hotel_load_w = 12.0
+    config.aircraft.payload_load_w = 8.0
+
+    result = evaluate_simple_mission_profile(
+        config,
+        outbound_distance_km=20.0,
+        loiter_duration_min=10.0,
+        return_distance_km=20.0,
+        outbound_wind_speed_m_per_s=0.0,
+        return_wind_speed_m_per_s=0.0,
+        cruise_mode="best_range",
+        max_speed_m_per_s=40.0,
+        num_points=80,
+    )
+
+    segments = result["segments"]
+
+    assert result["total_propulsion_energy_wh"] == pytest.approx(
+        sum(float(segment["propulsion_energy_wh"]) for segment in segments)
+    )
+    assert result["total_hotel_energy_wh"] == pytest.approx(
+        sum(float(segment["hotel_energy_wh"]) for segment in segments)
+    )
+    assert result["total_payload_energy_wh"] == pytest.approx(
+        sum(float(segment["payload_energy_wh"]) for segment in segments)
+    )
+    assert result["total_non_propulsive_energy_wh"] == pytest.approx(
+        sum(float(segment["non_propulsive_energy_wh"]) for segment in segments)
+    )
+    assert result["total_energy_used_wh"] == pytest.approx(
+        result["total_propulsion_energy_wh"] + result["total_non_propulsive_energy_wh"]
+    )

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pandas as pd
+
 from uav_mpe.mission_profile import evaluate_simple_mission_profile
 from uav_mpe.mission_profile_export import (
     save_mission_profile_segments_to_csv,
@@ -21,6 +23,8 @@ def make_test_config(wind_speed_m_per_s: float = 0.0) -> Config:
             cd0=0.03,
             cl_max=1.4,
             eta_total=0.7,
+            hotel_load_w=15.0,
+            payload_load_w=10.0,
         ),
         environment=Environment(
             air_density_kg_per_m3=1.225,
@@ -57,6 +61,24 @@ def test_save_mission_profile_segments_to_csv_creates_file(tmp_path: Path):
     assert returned_path.exists()
     assert returned_path == output
 
+    df = pd.read_csv(output)
+    expected_columns = {
+        "segment_name",
+        "segment_type",
+        "electrical_power_w",
+        "energy_used_wh",
+        "propulsion_electrical_power_w",
+        "hotel_load_w",
+        "payload_load_w",
+        "non_propulsive_electrical_load_w",
+        "propulsion_energy_wh",
+        "hotel_energy_wh",
+        "payload_energy_wh",
+        "non_propulsive_energy_wh",
+        "remaining_energy_wh_after_segment",
+    }
+    assert expected_columns.issubset(df.columns)
+
 
 def test_save_mission_profile_summary_to_csv_creates_file(tmp_path: Path):
     config = make_test_config()
@@ -78,3 +100,18 @@ def test_save_mission_profile_summary_to_csv_creates_file(tmp_path: Path):
 
     assert returned_path.exists()
     assert returned_path == output
+
+    df = pd.read_csv(output)
+    expected_columns = {
+        "available_energy_wh",
+        "total_time_h",
+        "total_energy_used_wh",
+        "total_propulsion_energy_wh",
+        "total_hotel_energy_wh",
+        "total_payload_energy_wh",
+        "total_non_propulsive_energy_wh",
+        "remaining_energy_wh",
+        "mission_feasible",
+        "number_of_segments",
+    }
+    assert set(df.columns) == expected_columns

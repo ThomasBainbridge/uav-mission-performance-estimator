@@ -21,6 +21,9 @@ from uav_mpe.operating_points import (
 from uav_mpe.performance import (
     battery_available_for_mission_wh,
     electrical_power_required_watts,
+    hotel_load_watts,
+    payload_load_watts,
+    non_propulsive_electrical_load_watts,
     wind_adjusted_ground_speed_m_per_s,
 )
 
@@ -40,6 +43,28 @@ def _config_with_flight_conditions(
         updated.environment.air_density_kg_per_m3 = None
 
     return updated
+
+
+def _segment_breakdown_fields(
+    segment_config: Config,
+    total_electrical_power_w: float,
+    time_h: float,
+) -> dict[str, float]:
+    hotel_load_w = hotel_load_watts(segment_config)
+    payload_load_w = payload_load_watts(segment_config)
+    non_propulsive_load_w = non_propulsive_electrical_load_watts(segment_config)
+    propulsion_electrical_power_w = total_electrical_power_w - non_propulsive_load_w
+
+    return {
+        "propulsion_electrical_power_w": propulsion_electrical_power_w,
+        "hotel_load_w": hotel_load_w,
+        "payload_load_w": payload_load_w,
+        "non_propulsive_electrical_load_w": non_propulsive_load_w,
+        "propulsion_energy_wh": propulsion_electrical_power_w * time_h,
+        "hotel_energy_wh": hotel_load_w * time_h,
+        "payload_energy_wh": payload_load_w * time_h,
+        "non_propulsive_energy_wh": non_propulsive_load_w * time_h,
+    }
 
 
 def evaluate_climb_segment(
@@ -71,6 +96,7 @@ def evaluate_climb_segment(
         "electrical_power_w": electrical_power_w,
         "time_h": time_h,
         "energy_used_wh": energy_used_wh,
+        **_segment_breakdown_fields(config, electrical_power_w, time_h),
     }
 
 
@@ -106,6 +132,7 @@ def evaluate_descent_segment(
         "electrical_power_w": electrical_power_w,
         "time_h": time_h,
         "energy_used_wh": energy_used_wh,
+        **_segment_breakdown_fields(config, electrical_power_w, time_h),
     }
 
 
@@ -146,6 +173,7 @@ def evaluate_cruise_segment_fixed_speed(
         "electrical_power_w": electrical_power_w,
         "time_h": time_h,
         "energy_used_wh": energy_used_wh,
+        **_segment_breakdown_fields(segment_config, electrical_power_w, time_h),
     }
 
 
@@ -200,6 +228,7 @@ def evaluate_cruise_segment_best_range(
         "electrical_power_w": electrical_power_w,
         "time_h": time_h,
         "energy_used_wh": energy_used_wh,
+        **_segment_breakdown_fields(segment_config, electrical_power_w, time_h),
     }
 
 
@@ -254,6 +283,7 @@ def evaluate_cruise_segment_best_wind_adjusted_range(
         "electrical_power_w": electrical_power_w,
         "time_h": time_h,
         "energy_used_wh": energy_used_wh,
+        **_segment_breakdown_fields(segment_config, electrical_power_w, time_h),
     }
 
 
@@ -287,6 +317,9 @@ def evaluate_loiter_segment_best_endurance(
     time_h = loiter_duration_min / 60.0
     energy_used_wh = electrical_power_w * time_h
 
+    config_for_breakdown = config_for_selection.model_copy(deep=True)
+    config_for_breakdown.mission.cruise_speed_m_per_s = airspeed_m_per_s
+
     return {
         "segment_name": segment_name,
         "segment_type": "loiter",
@@ -297,6 +330,7 @@ def evaluate_loiter_segment_best_endurance(
         "electrical_power_w": electrical_power_w,
         "time_h": time_h,
         "energy_used_wh": energy_used_wh,
+        **_segment_breakdown_fields(config_for_breakdown, electrical_power_w, time_h),
     }
 
 
@@ -456,16 +490,28 @@ def evaluate_simple_mission_profile(
 
     total_time_h = 0.0
     total_energy_used_wh = 0.0
+    total_propulsion_energy_wh = 0.0
+    total_hotel_energy_wh = 0.0
+    total_payload_energy_wh = 0.0
+    total_non_propulsive_energy_wh = 0.0
 
     for segment in segments:
         segment_time_h = segment["time_h"]
         segment_energy_wh = segment["energy_used_wh"]
+        segment_propulsion_energy_wh = segment["propulsion_energy_wh"]
+        segment_hotel_energy_wh = segment["hotel_energy_wh"]
+        segment_payload_energy_wh = segment["payload_energy_wh"]
+        segment_non_propulsive_energy_wh = segment["non_propulsive_energy_wh"]
 
         if not isinstance(segment_time_h, float) or not isinstance(segment_energy_wh, float):
             raise TypeError("Segment time_h and energy_used_wh must be floats.")
 
         total_time_h += segment_time_h
         total_energy_used_wh += segment_energy_wh
+        total_propulsion_energy_wh += float(segment_propulsion_energy_wh)
+        total_hotel_energy_wh += float(segment_hotel_energy_wh)
+        total_payload_energy_wh += float(segment_payload_energy_wh)
+        total_non_propulsive_energy_wh += float(segment_non_propulsive_energy_wh)
 
     mission_feasible = (
         isfinite(total_time_h)
@@ -477,6 +523,10 @@ def evaluate_simple_mission_profile(
         "available_energy_wh": available_energy_wh,
         "total_time_h": total_time_h,
         "total_energy_used_wh": total_energy_used_wh,
+        "total_propulsion_energy_wh": total_propulsion_energy_wh,
+        "total_hotel_energy_wh": total_hotel_energy_wh,
+        "total_payload_energy_wh": total_payload_energy_wh,
+        "total_non_propulsive_energy_wh": total_non_propulsive_energy_wh,
         "remaining_energy_wh": remaining_energy_wh,
         "mission_feasible": mission_feasible,
         "segments": segments,
