@@ -220,6 +220,31 @@ def mission_profile_segments_df(mission_profile: dict[str, object]) -> pd.DataFr
     return pd.DataFrame(segments)
 
 
+def mission_profile_display_df(mission_profile: dict[str, object]) -> pd.DataFrame:
+    segments = mission_profile["segments"]
+    if not isinstance(segments, list):
+        raise TypeError("mission_profile['segments'] must be a list.")
+
+    df = pd.DataFrame(segments)
+
+    preferred_columns = [
+        "segment_name",
+        "segment_type",
+        "speed_mode",
+        "altitude_m",
+        "distance_km",
+        "duration_min",
+        "airspeed_m_per_s",
+        "ground_speed_m_per_s",
+        "electrical_power_w",
+        "energy_used_wh",
+        "remaining_energy_wh_after_segment",
+    ]
+
+    available_columns = [col for col in preferred_columns if col in df.columns]
+    return df[available_columns]
+
+
 def make_sweep_df(config: Config) -> pd.DataFrame:
     return build_speed_sweep(
         config,
@@ -706,6 +731,8 @@ with tab3:
     st.subheader("Mission assessment")
 
     if config.mission.required_distance_km is not None:
+        st.markdown("### Mission feasibility summary")
+
         a1, a2, a3 = st.columns(3)
         a1.metric("Mission feasible", str(is_mission_feasible(config)))
         a2.metric("Range margin [km]", f"{range_margin_km(config):.2f}")
@@ -716,46 +743,63 @@ with tab3:
         a5.metric("Required mission energy [Wh]", f"{required_mission_energy_wh(config):.2f}")
 
     if mission_profile is not None:
-        st.subheader("Segmented mission profile")
-        b1, b2, b3 = st.columns(3)
-        b1.metric("Profile feasible", str(mission_profile["mission_feasible"]))
-        b2.metric("Total mission time [h]", f"{float(mission_profile['total_time_h']):.2f}")
-        b3.metric("Remaining energy [Wh]", f"{float(mission_profile['remaining_energy_wh']):.2f}")
+        st.markdown("---")
+        st.markdown("### Segmented mission profile")
 
-        b4, b5, b6, b7 = st.columns(4)
-        b4.metric("Propulsion energy [Wh]", f"{float(mission_profile['total_propulsion_energy_wh']):.2f}")
-        b5.metric("Hotel energy [Wh]", f"{float(mission_profile['total_hotel_energy_wh']):.2f}")
-        b6.metric("Payload energy [Wh]", f"{float(mission_profile['total_payload_energy_wh']):.2f}")
-        b7.metric("Non-propulsive energy [Wh]", f"{float(mission_profile['total_non_propulsive_energy_wh']):.2f}")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Profile feasible", str(mission_profile["mission_feasible"]))
+        c2.metric("Total mission time [h]", f"{float(mission_profile['total_time_h']):.2f}")
+        c3.metric("Remaining energy [Wh]", f"{float(mission_profile['remaining_energy_wh']):.2f}")
+
+        c4, c5, c6 = st.columns(3)
+        c4.metric("Available mission energy [Wh]", f"{float(mission_profile['available_energy_wh']):.2f}")
+        c5.metric("Total mission energy used [Wh]", f"{float(mission_profile['total_energy_used_wh']):.2f}")
+        c6.metric("Number of segments", f"{len(mission_profile['segments'])}")
+
+        st.markdown("#### Energy source breakdown")
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("Propulsion energy [Wh]", f"{float(mission_profile['total_propulsion_energy_wh']):.2f}")
+        d2.metric("Hotel energy [Wh]", f"{float(mission_profile['total_hotel_energy_wh']):.2f}")
+        d3.metric("Payload energy [Wh]", f"{float(mission_profile['total_payload_energy_wh']):.2f}")
+        d4.metric("Non-propulsive energy [Wh]", f"{float(mission_profile['total_non_propulsive_energy_wh']):.2f}")
 
         mission_summary_df = mission_profile_summary_df(mission_profile)
         segments_df = mission_profile_segments_df(mission_profile)
+        display_segments_df = mission_profile_display_df(mission_profile)
 
-        st.markdown("**Mission summary**")
+        st.markdown("#### Mission totals")
         st.dataframe(mission_summary_df.round(3), width="stretch")
-        st.download_button(
-            "Download mission summary CSV",
-            data=dataframe_to_csv_bytes(mission_summary_df),
-            file_name=f"{selected_stem}_mission_summary.csv",
-            mime="text/csv",
-        )
 
-        st.markdown("**Mission segments**")
-        st.dataframe(segments_df.round(3), width="stretch")
-        st.download_button(
-            "Download mission segments CSV",
-            data=dataframe_to_csv_bytes(segments_df),
-            file_name=f"{selected_stem}_mission_segments.csv",
-            mime="text/csv",
-        )
+        st.markdown("#### Segment results")
+        st.dataframe(display_segments_df.round(3), width="stretch")
 
-        st.markdown("**Mission energy by segment**")
+        with st.expander("Show detailed segment table", expanded=False):
+            st.dataframe(segments_df.round(3), width="stretch")
+
+        e1, e2 = st.columns(2)
+        with e1:
+            st.download_button(
+                "Download mission summary CSV",
+                data=dataframe_to_csv_bytes(mission_summary_df),
+                file_name=f"{selected_stem}_mission_summary.csv",
+                mime="text/csv",
+            )
+        with e2:
+            st.download_button(
+                "Download mission segments CSV",
+                data=dataframe_to_csv_bytes(segments_df),
+                file_name=f"{selected_stem}_mission_segments.csv",
+                mime="text/csv",
+            )
+
+        st.markdown("#### Charts")
+        st.markdown("**Total energy used by segment**")
         st.bar_chart(make_mission_energy_df(mission_profile), width="stretch")
 
-        st.markdown("**Mission energy breakdown by segment**")
+        st.markdown("**Energy source breakdown by segment**")
         st.bar_chart(make_mission_energy_breakdown_df(mission_profile), width="stretch")
 
-        st.markdown("**Remaining energy by mission stage**")
+        st.markdown("**Remaining mission energy by stage**")
         st.line_chart(make_remaining_energy_df(mission_profile), width="stretch")
     else:
         st.info("No segmented mission profile is defined in this config.")
