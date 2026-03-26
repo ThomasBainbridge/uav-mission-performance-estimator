@@ -305,6 +305,85 @@ def make_remaining_energy_df(mission_profile: dict[str, object]) -> pd.DataFrame
         }
     ).set_index("mission_stage")
 
+def make_scenario_display_df(scenario_df: pd.DataFrame) -> pd.DataFrame:
+    preferred_columns = [
+        "scenario",
+        "mission_feasible",
+        "available_energy_wh",
+        "total_energy_used_wh",
+        "remaining_energy_wh",
+        "total_time_h",
+        "total_propulsion_energy_wh",
+        "total_hotel_energy_wh",
+        "total_payload_energy_wh",
+        "total_non_propulsive_energy_wh",
+        "number_of_segments",
+        "outbound_distance_km",
+        "loiter_duration_min",
+        "return_distance_km",
+        "cruise_mode",
+    ]
+    available_columns = [col for col in preferred_columns if col in scenario_df.columns]
+    return scenario_df[available_columns]
+
+
+def make_scenario_energy_balance_chart_df(scenario_df: pd.DataFrame) -> pd.DataFrame:
+    cols = [col for col in ["total_energy_used_wh", "remaining_energy_wh"] if col in scenario_df.columns]
+    return scenario_df.set_index("scenario")[cols]
+
+
+def make_scenario_energy_source_chart_df(scenario_df: pd.DataFrame) -> pd.DataFrame:
+    cols = [
+        col
+        for col in [
+            "total_propulsion_energy_wh",
+            "total_hotel_energy_wh",
+            "total_payload_energy_wh",
+        ]
+        if col in scenario_df.columns
+    ]
+    return scenario_df.set_index("scenario")[cols]
+
+
+def make_scenario_time_chart_df(scenario_df: pd.DataFrame) -> pd.DataFrame:
+    cols = [col for col in ["total_time_h"] if col in scenario_df.columns]
+    return scenario_df.set_index("scenario")[cols]
+
+
+def make_configuration_display_df(config_df: pd.DataFrame) -> pd.DataFrame:
+    preferred_columns = [
+        "configuration",
+        "total_mass_kg",
+        "stall_speed_m_per_s",
+        "minimum_recommended_cruise_speed_m_per_s",
+        "electrical_power_at_nominal_cruise_w",
+        "best_endurance_speed_m_per_s",
+        "maximum_endurance_h",
+        "best_still_air_range_speed_m_per_s",
+        "maximum_still_air_range_km",
+        "best_wind_adjusted_range_speed_m_per_s",
+        "maximum_wind_adjusted_range_km",
+    ]
+    available_columns = [col for col in preferred_columns if col in config_df.columns]
+    return config_df[available_columns]
+
+
+def make_configuration_range_chart_df(config_df: pd.DataFrame) -> pd.DataFrame:
+    cols = [
+        col
+        for col in [
+            "maximum_still_air_range_km",
+            "maximum_wind_adjusted_range_km",
+        ]
+        if col in config_df.columns
+    ]
+    return config_df.set_index("configuration")[cols]
+
+
+def make_configuration_endurance_chart_df(config_df: pd.DataFrame) -> pd.DataFrame:
+    cols = [col for col in ["maximum_endurance_h"] if col in config_df.columns]
+    return config_df.set_index("configuration")[cols]
+
 
 def make_sweep_chart_df(sweep_df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     return sweep_df[["airspeed_m_per_s", *cols]].set_index("airspeed_m_per_s")
@@ -806,12 +885,36 @@ with tab3:
 
 with tab4:
     st.subheader("Default mission scenario comparison")
+
     scenario_df = compare_mission_scenarios(
         config_paths=DEFAULT_MISSION_SCENARIO_FILES,
         max_speed_m_per_s=40.0,
         num_points=120,
     )
-    st.dataframe(scenario_df.round(3), width="stretch")
+    scenario_display_df = make_scenario_display_df(scenario_df)
+
+    feasible_count = int(scenario_df["mission_feasible"].sum())
+    best_margin_row = scenario_df.sort_values("remaining_energy_wh", ascending=False).iloc[0]
+    lowest_energy_row = scenario_df.sort_values("total_energy_used_wh", ascending=True).iloc[0]
+    fastest_row = scenario_df.sort_values("total_time_h", ascending=True).iloc[0]
+
+    a1, a2, a3, a4 = st.columns(4)
+    a1.metric("Feasible scenarios", f"{feasible_count}/{len(scenario_df)}")
+    a2.metric(
+        f"Best energy margin: {str(best_margin_row['scenario'])}",
+        f"{float(best_margin_row['remaining_energy_wh']):.2f} Wh",
+    )
+    a3.metric(
+        f"Lowest mission energy: {str(lowest_energy_row['scenario'])}",
+        f"{float(lowest_energy_row['total_energy_used_wh']):.2f} Wh",
+    )
+    a4.metric(
+        f"Shortest mission time: {str(fastest_row['scenario'])}",
+        f"{float(fastest_row['total_time_h']):.2f} h",
+    )
+
+    st.markdown("#### Comparison table")
+    st.dataframe(scenario_display_df.round(3), width="stretch")
     st.download_button(
         "Download mission scenario comparison CSV",
         data=dataframe_to_csv_bytes(scenario_df),
@@ -819,11 +922,19 @@ with tab4:
         mime="text/csv",
     )
 
-    st.markdown("**Mission scenario energy balance**")
-    scenario_chart_df = scenario_df.set_index("scenario")[["total_energy_used_wh", "remaining_energy_wh"]]
-    st.bar_chart(scenario_chart_df, width="stretch")
+    st.markdown("#### Charts")
+    st.markdown("**Mission energy balance**")
+    st.bar_chart(make_scenario_energy_balance_chart_df(scenario_df), width="stretch")
 
+    st.markdown("**Mission energy source breakdown**")
+    st.bar_chart(make_scenario_energy_source_chart_df(scenario_df), width="stretch")
+
+    st.markdown("**Mission time by scenario**")
+    st.bar_chart(make_scenario_time_chart_df(scenario_df), width="stretch")
+
+    st.markdown("---")
     st.subheader("Default configuration comparison")
+
     config_df = compare_configurations(
         config_paths=[
             str(CONFIG_DIR / "example_fixed_wing.yaml"),
@@ -833,7 +944,28 @@ with tab4:
         max_speed_m_per_s=40.0,
         num_points=120,
     )
-    st.dataframe(config_df.round(3), width="stretch")
+    config_display_df = make_configuration_display_df(config_df)
+
+    best_still_air_row = config_df.sort_values("maximum_still_air_range_km", ascending=False).iloc[0]
+    best_wind_row = config_df.sort_values("maximum_wind_adjusted_range_km", ascending=False).iloc[0]
+    best_endurance_row = config_df.sort_values("maximum_endurance_h", ascending=False).iloc[0]
+
+    b1, b2, b3 = st.columns(3)
+    b1.metric(
+        f"Best still-air range: {str(best_still_air_row['configuration'])}",
+        f"{float(best_still_air_row['maximum_still_air_range_km']):.2f} km",
+    )
+    b2.metric(
+        f"Best wind-adjusted range: {str(best_wind_row['configuration'])}",
+        f"{float(best_wind_row['maximum_wind_adjusted_range_km']):.2f} km",
+    )
+    b3.metric(
+        f"Best endurance: {str(best_endurance_row['configuration'])}",
+        f"{float(best_endurance_row['maximum_endurance_h']):.2f} h",
+    )
+
+    st.markdown("#### Configuration table")
+    st.dataframe(config_display_df.round(3), width="stretch")
     st.download_button(
         "Download configuration comparison CSV",
         data=dataframe_to_csv_bytes(config_df),
@@ -841,9 +973,12 @@ with tab4:
         mime="text/csv",
     )
 
+    st.markdown("#### Charts")
     st.markdown("**Maximum range by configuration**")
-    config_chart_df = config_df.set_index("configuration")[["maximum_still_air_range_km", "maximum_wind_adjusted_range_km"]]
-    st.bar_chart(config_chart_df, width="stretch")
+    st.bar_chart(make_configuration_range_chart_df(config_df), width="stretch")
+
+    st.markdown("**Maximum endurance by configuration**")
+    st.bar_chart(make_configuration_endurance_chart_df(config_df), width="stretch")
 
 with tab5:
     st.subheader("Compare saved scenarios")
@@ -863,8 +998,30 @@ with tab5:
             max_speed_m_per_s=40.0,
             num_points=120,
         )
+        saved_display_df = make_scenario_display_df(saved_scenario_df)
 
-        st.dataframe(saved_scenario_df.round(3), width="stretch")
+        feasible_count = int(saved_scenario_df["mission_feasible"].sum())
+        best_margin_row = saved_scenario_df.sort_values("remaining_energy_wh", ascending=False).iloc[0]
+        lowest_energy_row = saved_scenario_df.sort_values("total_energy_used_wh", ascending=True).iloc[0]
+        fastest_row = saved_scenario_df.sort_values("total_time_h", ascending=True).iloc[0]
+
+        s1, s2, s3, s4 = st.columns(4)
+        s1.metric("Feasible scenarios", f"{feasible_count}/{len(saved_scenario_df)}")
+        s2.metric(
+            f"Best energy margin: {str(best_margin_row['scenario'])}",
+            f"{float(best_margin_row['remaining_energy_wh']):.2f} Wh",
+        )
+        s3.metric(
+            f"Lowest mission energy: {str(lowest_energy_row['scenario'])}",
+            f"{float(lowest_energy_row['total_energy_used_wh']):.2f} Wh",
+        )
+        s4.metric(
+            f"Shortest mission time: {str(fastest_row['scenario'])}",
+            f"{float(fastest_row['total_time_h']):.2f} h",
+        )
+
+        st.markdown("#### Comparison table")
+        st.dataframe(saved_display_df.round(3), width="stretch")
         st.download_button(
             "Download saved scenario comparison CSV",
             data=dataframe_to_csv_bytes(saved_scenario_df),
@@ -872,13 +1029,15 @@ with tab5:
             mime="text/csv",
         )
 
+        st.markdown("#### Charts")
         st.markdown("**Saved scenario energy balance**")
-        saved_chart_df = saved_scenario_df.set_index("scenario")[["total_energy_used_wh", "remaining_energy_wh"]]
-        st.bar_chart(saved_chart_df, width="stretch")
+        st.bar_chart(make_scenario_energy_balance_chart_df(saved_scenario_df), width="stretch")
+
+        st.markdown("**Saved scenario energy source breakdown**")
+        st.bar_chart(make_scenario_energy_source_chart_df(saved_scenario_df), width="stretch")
 
         st.markdown("**Saved scenario mission time**")
-        saved_time_df = saved_scenario_df.set_index("scenario")[["total_time_h"]]
-        st.bar_chart(saved_time_df, width="stretch")
+        st.bar_chart(make_scenario_time_chart_df(saved_scenario_df), width="stretch")
 
 with tab6:
     st.subheader("Config inspection and scenario management")
