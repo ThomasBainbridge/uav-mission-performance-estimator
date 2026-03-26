@@ -8,7 +8,11 @@ import yaml
 from uav_mpe.models import Config
 from uav_mpe.performance import (
     electrical_power_required_watts,
+    hotel_load_watts,
     minimum_recommended_cruise_speed_m_per_s,
+    non_propulsive_electrical_load_watts,
+    payload_load_watts,
+    propulsion_electrical_power_required_watts,
     stall_speed_m_per_s,
     total_mass_kg,
 )
@@ -60,6 +64,12 @@ def compare_configurations(
                 "minimum_recommended_cruise_speed_m_per_s": (
                     minimum_recommended_cruise_speed_m_per_s(config)
                 ),
+                "propulsion_electrical_power_at_nominal_cruise_w": (
+                    propulsion_electrical_power_required_watts(config)
+                ),
+                "hotel_load_w": hotel_load_watts(config),
+                "payload_load_w": payload_load_watts(config),
+                "non_propulsive_electrical_load_w": non_propulsive_electrical_load_watts(config),
                 "electrical_power_at_nominal_cruise_w": (
                     electrical_power_required_watts(config)
                 ),

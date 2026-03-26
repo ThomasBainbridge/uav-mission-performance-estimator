@@ -35,6 +35,7 @@ from uav_mpe.performance import (
     minimum_recommended_cruise_speed_m_per_s,
     non_propulsive_electrical_load_watts,
     payload_load_watts,
+    propulsion_electrical_power_required_watts,
     reserve_energy_wh,
     stall_speed_m_per_s,
     still_air_range_km,
@@ -150,11 +151,12 @@ def make_performance_summary(config: Config) -> dict[str, float]:
         "battery_usable_energy_wh": battery_usable_energy_wh(config),
         "reserve_energy_wh": reserve_energy_wh(config),
         "battery_available_for_mission_wh": battery_available_for_mission_wh(config),
+        "air_power_required_w": air_power_required_watts(config),
+        "propulsion_electrical_power_required_w": propulsion_electrical_power_required_watts(config),
         "hotel_load_w": hotel_load_watts(config),
         "payload_load_w": payload_load_watts(config),
         "non_propulsive_electrical_load_w": non_propulsive_electrical_load_watts(config),
         "electrical_power_required_w": electrical_power_required_watts(config),
-        "air_power_required_w": air_power_required_watts(config),
         "endurance_h": endurance_hours(config),
         "still_air_range_km": still_air_range_km(config),
         "wind_adjusted_range_km": wind_adjusted_range_km(config),
@@ -356,6 +358,10 @@ def make_configuration_display_df(config_df: pd.DataFrame) -> pd.DataFrame:
         "total_mass_kg",
         "stall_speed_m_per_s",
         "minimum_recommended_cruise_speed_m_per_s",
+        "propulsion_electrical_power_at_nominal_cruise_w",
+        "hotel_load_w",
+        "payload_load_w",
+        "non_propulsive_electrical_load_w",
         "electrical_power_at_nominal_cruise_w",
         "best_endurance_speed_m_per_s",
         "maximum_endurance_h",
@@ -387,6 +393,26 @@ def make_configuration_endurance_chart_df(config_df: pd.DataFrame) -> pd.DataFra
 
 def make_sweep_chart_df(sweep_df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     return sweep_df[["airspeed_m_per_s", *cols]].set_index("airspeed_m_per_s")
+
+def performance_summary_df(summary: dict[str, float]) -> pd.DataFrame:
+    return pd.DataFrame([summary])
+
+
+def make_performance_display_df(sweep_df: pd.DataFrame) -> pd.DataFrame:
+    preferred_columns = [
+        "airspeed_m_per_s",
+        "air_power_w",
+        "propulsion_electrical_power_w",
+        "hotel_load_w",
+        "payload_load_w",
+        "non_propulsive_electrical_load_w",
+        "electrical_power_w",
+        "endurance_h",
+        "still_air_range_km",
+        "wind_adjusted_range_km",
+    ]
+    available_columns = [col for col in preferred_columns if col in sweep_df.columns]
+    return sweep_df[available_columns]
 
 
 def set_trade_study_parameter(config: Config, parameter_name: str, value: float) -> Config:
@@ -769,8 +795,23 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
 )
 
 with tab1:
-    st.subheader("Speed sweep results")
-    st.dataframe(sweep_df.round(3), width="stretch")
+    st.subheader("Steady-flight performance")
+
+    p1, p2, p3, p4 = st.columns(4)
+    p1.metric("Air power [W]", f"{summary['air_power_required_w']:.1f}")
+    p2.metric("Propulsion electrical [W]", f"{summary['propulsion_electrical_power_required_w']:.1f}")
+    p3.metric("Non-propulsive electrical [W]", f"{summary['non_propulsive_electrical_load_w']:.1f}")
+    p4.metric("Total electrical [W]", f"{summary['electrical_power_required_w']:.1f}")
+
+    p5, p6 = st.columns(2)
+    p5.metric("Hotel load [W]", f"{summary['hotel_load_w']:.1f}")
+    p6.metric("Payload load [W]", f"{summary['payload_load_w']:.1f}")
+
+    st.markdown("**Performance summary**")
+    st.dataframe(performance_summary_df(summary).round(3), width="stretch")
+
+    st.markdown("**Speed sweep results**")
+    st.dataframe(make_performance_display_df(sweep_df).round(3), width="stretch")
     st.download_button(
         "Download speed sweep CSV",
         data=dataframe_to_csv_bytes(sweep_df),
@@ -778,9 +819,25 @@ with tab1:
         mime="text/csv",
     )
 
-    st.markdown("**Power vs airspeed**")
+    st.markdown("**Aerodynamic and electrical power vs airspeed**")
     st.line_chart(
-        make_sweep_chart_df(sweep_df, ["air_power_w", "electrical_power_w"]),
+        make_sweep_chart_df(
+            sweep_df,
+            ["air_power_w", "propulsion_electrical_power_w", "electrical_power_w"],
+        ),
+        width="stretch",
+    )
+
+    st.markdown("**Electrical power breakdown vs airspeed**")
+    st.line_chart(
+        make_sweep_chart_df(
+            sweep_df,
+            [
+                "propulsion_electrical_power_w",
+                "non_propulsive_electrical_load_w",
+                "electrical_power_w",
+            ],
+        ),
         width="stretch",
     )
 

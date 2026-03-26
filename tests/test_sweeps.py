@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from uav_mpe.models import Aircraft, Config, Environment, Mission
@@ -23,6 +24,8 @@ def make_test_config(wind_speed_m_per_s: float = 0.0) -> Config:
             cd0=0.03,
             cl_max=1.4,
             eta_total=0.7,
+            hotel_load_w=15.0,
+            payload_load_w=10.0,
         ),
         environment=Environment(
             air_density_kg_per_m3=1.225,
@@ -48,6 +51,10 @@ def test_build_speed_sweep_returns_dataframe_with_expected_columns():
         "drag_coefficient",
         "drag_force_n",
         "air_power_w",
+        "propulsion_electrical_power_w",
+        "hotel_load_w",
+        "payload_load_w",
+        "non_propulsive_electrical_load_w",
         "electrical_power_w",
         "endurance_h",
         "still_air_range_km",
@@ -74,6 +81,20 @@ def test_speed_sweep_speed_is_monotonic_increasing():
     df = build_speed_sweep(config, max_speed_m_per_s=40.0, num_points=50)
 
     assert df["airspeed_m_per_s"].is_monotonic_increasing
+
+
+def test_speed_sweep_power_breakdown_is_internally_consistent():
+    config = make_test_config()
+    df = build_speed_sweep(config, max_speed_m_per_s=40.0, num_points=50)
+
+    assert np.allclose(
+        df["non_propulsive_electrical_load_w"],
+        df["hotel_load_w"] + df["payload_load_w"],
+    )
+    assert np.allclose(
+        df["electrical_power_w"],
+        df["propulsion_electrical_power_w"] + df["non_propulsive_electrical_load_w"],
+    )
 
 
 def test_best_rows_match_dataframe_maxima():

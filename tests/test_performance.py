@@ -10,9 +10,13 @@ from uav_mpe.performance import (
     drag_force_newtons,
     electrical_power_required_watts,
     endurance_hours,
+    hotel_load_watts,
     induced_drag_factor,
     lift_coefficient,
     minimum_recommended_cruise_speed_m_per_s,
+    non_propulsive_electrical_load_watts,
+    payload_load_watts,
+    propulsion_electrical_power_required_watts,
     still_air_range_km,
     stall_speed_m_per_s,
     total_mass_kg,
@@ -35,6 +39,8 @@ def make_test_config(wind_speed_m_per_s: float = 0.0) -> Config:
             cd0=0.03,
             cl_max=1.4,
             eta_total=0.7,
+            hotel_load_w=15.0,
+            payload_load_w=10.0,
         ),
         environment=Environment(
             air_density_kg_per_m3=1.225,
@@ -104,6 +110,21 @@ def test_drag_and_power_are_positive():
     assert p_elec > p_air
 
 
+def test_electrical_power_breakdown_is_internally_consistent():
+    config = make_test_config()
+
+    propulsion_electrical_power_w = propulsion_electrical_power_required_watts(config)
+    hotel_load_w = hotel_load_watts(config)
+    payload_load_w = payload_load_watts(config)
+    non_propulsive_load_w = non_propulsive_electrical_load_watts(config)
+    total_electrical_power_w = electrical_power_required_watts(config)
+
+    assert non_propulsive_load_w == pytest.approx(hotel_load_w + payload_load_w)
+    assert total_electrical_power_w == pytest.approx(
+        propulsion_electrical_power_w + non_propulsive_load_w
+    )
+
+
 def test_endurance_and_range_are_positive():
     config = make_test_config()
 
@@ -124,4 +145,3 @@ def test_large_headwind_cannot_produce_negative_ground_speed():
 
     assert wind_adjusted_ground_speed_m_per_s(config) == 0.0
     assert wind_adjusted_range_km(config) == 0.0
-

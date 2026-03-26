@@ -41,9 +41,13 @@ from uav_mpe.performance import (
     electrical_power_required_watts,
     endurance_hours,
     endurance_seconds,
+    hotel_load_watts,
     induced_drag_factor,
     lift_coefficient,
     minimum_recommended_cruise_speed_m_per_s,
+    non_propulsive_electrical_load_watts,
+    payload_load_watts,
+    propulsion_electrical_power_required_watts,
     still_air_range_km,
     still_air_range_m,
     stall_speed_m_per_s,
@@ -52,6 +56,7 @@ from uav_mpe.performance import (
     wind_adjusted_ground_speed_m_per_s,
     wind_adjusted_range_km,
     wind_adjusted_range_m,
+
 )
 from uav_mpe.plotting import (
     plot_comparison_ranges,
@@ -112,6 +117,10 @@ def main(config_path: str) -> None:
     print(f"Drag coefficient, Cd [-]: {drag_coefficient(config):.4f}")
     print(f"Drag force [N]: {drag_force_newtons(config):.3f}")
     print(f"Air power required [W]: {air_power_required_watts(config):.3f}")
+    print(f"Propulsion electrical power [W]: {propulsion_electrical_power_required_watts(config):.3f}")
+    print(f"Hotel load [W]: {hotel_load_watts(config):.3f}")
+    print(f"Payload load [W]: {payload_load_watts(config):.3f}")
+    print(f"Non-propulsive electrical load [W]: {non_propulsive_electrical_load_watts(config):.3f}")
     print(f"Electrical power required [W]: {electrical_power_required_watts(config):.3f}")
     print(f"Endurance [s]: {endurance_seconds(config):.3f}")
     print(f"Endurance [h]: {endurance_hours(config):.3f}")
