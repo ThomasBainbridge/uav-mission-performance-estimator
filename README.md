@@ -68,23 +68,24 @@ It introduced:
 - richer config-driven mission definitions for more realistic mission studies
 - backend mission-model extensions while keeping compatibility with the existing CLI and Streamlit workflows
 
-### Current Development – Version 5 Work in Progress
+### Version 5 – Electrical-Load-Aware Mission Energy Modelling
 
-The current development state extends the mission-energy model so that the tool does not just estimate whether a mission is feasible, but also shows more clearly where the electrical energy is being used.
+Version 5 extends the performance and mission-energy model so that the tool does not just estimate whether a mission is feasible, but also shows more clearly where the electrical power and energy are being used.
 
-Current Version 5 work includes:
+It introduced:
 
 - hotel electrical load modelling
 - payload electrical load modelling
 - optional loiter-specific payload-load override
 - total electrical power defined as propulsion electrical power plus non-propulsive electrical loads
 - corrected descent power treatment so non-propulsive loads remain internally consistent
+- steady-flight electrical power breakdown outputs
 - per-segment mission energy breakdown by source
 - mission-level totals for propulsion, hotel, payload, and total non-propulsive energy
 - improved mission summary outputs in the Streamlit app
 - clearer segmented mission tables and charts in the Streamlit app
 - improved scenario-comparison and trade-study presentation for easier engineering interpretation
-
+- updated example YAML cases demonstrating electrical-load-aware mission modelling
 
 ## Repository Structure
 
