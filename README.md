@@ -2,7 +2,7 @@
 
 A Python-based engineering tool for estimating fixed-wing UAV performance and mission-profile behaviour from preliminary design inputs.
 
-The project has been developed in stages, progressing from a core fixed-wing performance estimator to segmented mission-profile analysis, a polished Streamlit front end for interactive trade studies, and more realistic mission-phase modelling.
+The project has been developed in stages, progressing from a core fixed-wing performance estimator to segmented mission-profile analysis, a polished Streamlit front end for interactive trade studies, more realistic mission-phase modelling, and more transparent electrical-load and mission-energy accounting.
 
 ## Version Overview
 
@@ -67,6 +67,44 @@ It introduced:
 - reserve strategy options using either reserve fraction or fixed reserve energy
 - richer config-driven mission definitions for more realistic mission studies
 - backend mission-model extensions while keeping compatibility with the existing CLI and Streamlit workflows
+
+### Current Development – Version 5 Work in Progress
+
+The current development state extends the mission-energy model so that the tool does not just estimate whether a mission is feasible, but also shows more clearly where the electrical energy is being used.
+
+Current Version 5 work includes:
+
+- hotel electrical load modelling
+- payload electrical load modelling
+- optional loiter-specific payload-load override
+- total electrical power defined as propulsion electrical power plus non-propulsive electrical loads
+- corrected descent power treatment so non-propulsive loads remain internally consistent
+- per-segment mission energy breakdown by source
+- mission-level totals for propulsion, hotel, payload, and total non-propulsive energy
+- improved mission summary outputs in the Streamlit app
+- clearer segmented mission tables and charts in the Streamlit app
+- improved scenario-comparison and trade-study presentation for easier engineering interpretation
+
+
+## Repository Structure
+
+```text
+uav-mission-performance-estimator/
+├── app/
+│   └── streamlit_app.py
+├── configs/
+│   ├── example_fixed_wing.yaml
+│   ├── example_fixed_wing_fast.yaml
+│   ├── example_fixed_wing_long_range.yaml
+│   ├── mission_baseline.yaml
+│   ├── mission_loiter.yaml
+│   └── mission_windy.yaml
+├── outputs/
+├── src/
+│   └── uav_mpe/
+├── tests/
+├── pyproject.toml
+└── README.md
 
 
 ## How to Run 
