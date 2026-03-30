@@ -1,6 +1,1 @@
-streamlit
-numpy
-pandas
-pydantic
-pyyaml
-matplotlib
+-e .
