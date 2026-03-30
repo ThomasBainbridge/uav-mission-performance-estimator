@@ -10,7 +10,7 @@ dependencies = [
     "pydantic",
     "pyyaml",
     "matplotlib",
-    "streamlit"
+    "streamlit>=1.55.0"
 ]
 
 [tool.pytest.ini_options]
