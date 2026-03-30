@@ -202,7 +202,7 @@ def main(config_path: str) -> None:
         )
 
         print()
-        print("Version 2 mission profile")
+        print("Segmented mission profile analysis")
         print("-" * 50)
         print(f"Mission feasible [-]: {mission_profile['mission_feasible']}")
         print(f"Total mission time [h]: {mission_profile['total_time_h']:.3f}")
