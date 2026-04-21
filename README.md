@@ -1,121 +1,183 @@
 # UAV Performance and Mission Analysis
 
-A Python-based engineering tool for estimating fixed-wing UAV performance and mission-profile behaviour from preliminary design inputs.
+A web-based engineering tool for estimating fixed-wing UAV performance and mission-profile behaviour from preliminary design inputs.
 
-The project has been developed in stages, progressing from a core fixed-wing performance estimator to segmented mission-profile analysis, a polished Streamlit front end for interactive trade studies, more realistic mission-phase modelling, and more transparent electrical-load and mission-energy accounting.
+This project provides a parametric framework for evaluating UAV flight performance, mission feasibility, and energy consumption using simplified aerodynamic and propulsion models. It is designed for early-stage design studies, trade analysis, and rapid mission assessment.
 
-## Version Overview
+The tool is deployed as a static web application using HTML, CSS, and JavaScript, enabling immediate access without requiring a Python runtime or backend server.
+
+---
+
+## Overview
+
+The model evaluates UAV performance and mission execution by combining:
+
+* steady-level flight performance analysis
+* aerodynamic drag and power estimation
+* endurance and range optimisation
+* segmented mission modelling
+* electrical power and energy accounting
+
+The tool allows users to explore how design parameters and mission definitions influence feasibility, efficiency, and overall system performance.
+
+---
+
+## Key Features
+
+### Performance Modelling
+
+* Stall speed estimation
+* Cruise speed constraints and recommendations
+* Drag and power requirement calculations
+* Airspeed sweep analysis
+* Identification of:
+
+  * best endurance speed
+  * best range speed
+
+### Mission Analysis
+
+* Segmented mission modelling:
+
+  * outbound
+  * loiter
+  * return
+* Mission feasibility evaluation
+* Total mission time and distance estimation
+* Energy consumption tracking across all mission phases
+
+### Energy and Electrical Modelling
+
+* Propulsion power estimation
+* Hotel (onboard systems) electrical load modelling
+* Payload electrical load modelling
+* Total electrical power and energy breakdown
+* Per-segment and mission-level energy accounting
+
+### Interactive Web Interface
+
+* Browser-based parameter input
+* Instant calculation and updates
+* Clean visual presentation of results
+* No installation or backend required
+
+---
+
+## Engineering Scope and Assumptions
+
+The model is intended for **preliminary design and trade studies**. Key assumptions include:
+
+* steady, quasi-level flight conditions
+* simplified aerodynamic drag representation
+* reduced-order propulsion modelling
+* ISA-based atmospheric approximation
+* no high-fidelity CFD or transient flight dynamics
+
+The tool is not intended for detailed design validation but provides rapid insight into system-level behaviour.
+
+---
+
+## Project Evolution
+
+The project has been developed in stages, progressing from a Python-based performance estimator to a fully deployable web-based engineering tool.
 
 ### Version 1 – Core Performance Estimator
 
-Version 1 established the core fixed-wing UAV performance engine.
+* steady level-flight modelling
+* drag, power, endurance, and range calculations
+* airspeed sweeps and optimal speed identification
 
-It introduced:
+### Version 2 – Mission-Profile Analysis
 
-- fixed-wing steady level-flight performance modelling
-- stall speed and minimum recommended cruise speed
-- drag, power, endurance, and range calculations
-- airspeed sweep analysis
-- best-endurance and best-range speed identification
-- comparison of multiple UAV configurations
-- mission feasibility assessment at chosen cruise speed
-- CSV export of results
-- automatic plot generation
+* segmented mission modelling
+* mission energy tracking
+* scenario-based evaluation
 
-### Version 2 – Mission-Profile and Scenario Analysis
+### Version 3 – Interactive Application Layer
 
-Version 2 extended the tool from single-point performance estimation into segmented mission analysis.
-
-It introduced:
-
-- reusable best-endurance, best-range, and best wind-adjusted range operating point selection
-- config-driven segmented mission profiles
-- outbound / loiter / return mission evaluation
-- mission profile energy tracking by segment
-- mission profile CSV export
-- mission profile plot generation
-- ISA atmosphere support using altitude-based density estimation
-- CLI config selection
-- mission scenario comparison across multiple YAML cases
-
-### Version 3 – Interactive Streamlit Application
-
-Version 3 added a user-facing application layer on top of the existing analysis engine and was later polished into a more complete engineering trade-study tool.
-
-It introduced:
-
-- a live Streamlit interface for loading YAML-based cases
-- editable aircraft, mission, and environment inputs directly in the UI
-- live performance, mission, and comparison charts
-- CSV downloads for sweeps, mission summaries, scenario comparisons, and trade studies
-- YAML download for edited active configurations
-- saved scenario creation directly into the `configs/` folder
-- saved-scenario comparison inside the app
-- trade-study / sensitivity plots for key design parameters
-- reset-to-base-config workflow
-- clearer usability, layout, and assumptions/scope presentation
+* user interface for parameter input and results visualisation
+* real-time analysis capability
 
 ### Version 4 – Extended Mission Modelling
 
-Version 4 improved the physical realism of the mission model by introducing additional mission phases and more flexible mission-definition options.
+* climb and descent segment modelling
+* altitude-dependent mission phases
+* improved mission definition flexibility
 
-It introduced:
+### Version 5 – Electrical Energy Modelling
 
-- climb segment modelling using climb altitude and climb rate
-- descent segment modelling using descent altitude, descent rate, and descent power factor
-- segment-specific altitude support for outbound, loiter, and return phases
-- reserve strategy options using either reserve fraction or fixed reserve energy
-- richer config-driven mission definitions for more realistic mission studies
-- backend mission-model extensions while keeping compatibility with the existing CLI and Streamlit workflows
+* inclusion of hotel and payload electrical loads
+* full mission energy breakdown by source
+* improved interpretation of energy usage
 
-### Version 5 – Electrical-Load-Aware Mission Energy Modelling
+### Current Version – Web Deployment
 
-Version 5 extends the performance and mission-energy model so that the tool does not just estimate whether a mission is feasible, but also shows more clearly where the electrical power and energy are being used.
+* migration from Python/Streamlit to a static web application
+* browser-based execution of the performance model
+* permanent hosting via GitHub Pages
 
-It introduced:
+---
 
-- hotel electrical load modelling
-- payload electrical load modelling
-- optional loiter-specific payload-load override
-- total electrical power defined as propulsion electrical power plus non-propulsive electrical loads
-- corrected descent power treatment so non-propulsive loads remain internally consistent
-- steady-flight electrical power breakdown outputs
-- per-segment mission energy breakdown by source
-- mission-level totals for propulsion, hotel, payload, and total non-propulsive energy
-- improved mission summary outputs in the Streamlit app
-- clearer segmented mission tables and charts in the Streamlit app
-- improved scenario-comparison and trade-study presentation for easier engineering interpretation
-- updated example YAML cases demonstrating electrical-load-aware mission modelling
-
-## Repository Structure
+## Project Structure
 
 ```text
 uav-mission-performance-estimator/
-├── app/
-│   └── streamlit_app.py
-├── configs/
-│   ├── example_fixed_wing.yaml
-│   ├── example_fixed_wing_fast.yaml
-│   ├── example_fixed_wing_long_range.yaml
-│   ├── mission_baseline.yaml
-│   ├── mission_loiter.yaml
-│   └── mission_windy.yaml
-├── outputs/
-├── src/
-│   └── uav_mpe/
-├── tests/
-├── pyproject.toml
+├── index.html          # Main application interface
+├── styles.css          # Styling and layout
+├── js/
+│   └── app.js          # Core performance and mission model
+├── assets/             # Images and static resources (optional)
 └── README.md
+```
+
+---
+
+## Usage
+
+1. Open the deployed website
+2. Enter UAV parameters:
+
+   * mass
+   * aerodynamic properties
+   * propulsion characteristics
+3. Define mission parameters:
+
+   * speeds
+   * distances
+   * loiter duration
+4. View:
+
+   * performance outputs
+   * mission feasibility
+   * energy breakdown
+
+All calculations are executed directly in the browser.
+
+---
+
+## Deployment
+
+The application is hosted using GitHub Pages and runs entirely client-side.
+
+No installation, Python environment, or server infrastructure is required.
+
+---
+
+## Future Work
+
+Potential extensions include:
+
+* integration of propeller performance data
+* wind and atmospheric variability modelling
+* optimisation routines for mission planning
+* coupling with higher-fidelity aerodynamic models
+* exportable reports and design summaries
+
+---
+
+## Author
+
+Thomas Bainbridge
 
 
-## How to Run 
-
-Run the CLI version with a selected config file:
-
-
-py -m uav_mpe.main --config configs/example_fixed_wing.yaml
-
-
-Run the Streamlit app:
-
-streamlit run app/streamlit_app.py
+---

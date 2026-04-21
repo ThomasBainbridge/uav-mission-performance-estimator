@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAV Mission Performance Estimator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__inner shell">
+      <div>
+        <p class="eyebrow">Static GitHub Pages edition</p>
+        <h1>UAV Mission Performance Estimator</h1>
+        <p class="hero__copy">Fixed-wing preliminary performance and segmented mission analysis in a static site with browser-side calculations.</p>
+      </div>
+      <div class="hero__actions">
+        <button id="downloadConfigBtn" class="btn btn--ghost">Download active scenario</button>
+        <button id="exportSummaryBtn" class="btn">Download summary CSV</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell app-grid">
+    <aside class="panel controls-panel">
+      <div class="panel__section">
+        <h2>Scenario</h2>
+        <label class="field">
+          <span>Preset</span>
+          <select id="presetSelect"></select>
+        </label>
+        <div class="button-row">
+          <button id="loadPresetBtn" class="btn btn--small">Load preset</button>
+          <button id="resetBtn" class="btn btn--small btn--ghost">Reset edits</button>
+        </div>
+      </div>
+
+      <div class="panel__section">
+        <h2>Saved scenarios</h2>
+        <label class="field">
+          <span>Name</span>
+          <input id="scenarioName" type="text" value="baseline_custom" />
+        </label>
+        <div class="button-row">
+          <button id="saveScenarioBtn" class="btn btn--small">Save in browser</button>
+          <button id="deleteScenarioBtn" class="btn btn--small btn--danger">Delete selected</button>
+        </div>
+        <label class="field">
+          <span>Saved</span>
+          <select id="savedScenarioSelect" size="5"></select>
+        </label>
+        <button id="loadSavedBtn" class="btn btn--small btn--ghost">Load saved scenario</button>
+      </div>
+
+      <div class="panel__section">
+        <h2>Aircraft</h2>
+        <div class="form-grid two-col" id="aircraftFields"></div>
+      </div>
+
+      <div class="panel__section">
+        <h2>Environment</h2>
+        <div class="form-grid two-col" id="environmentFields"></div>
+      </div>
+
+      <div class="panel__section">
+        <h2>Mission</h2>
+        <div class="form-grid two-col" id="missionFields"></div>
+      </div>
+
+      <div class="panel__section">
+        <h2>Mission profile</h2>
+        <div class="form-grid two-col" id="profileFields"></div>
+      </div>
+    </aside>
+
+    <section class="content">
+      <section class="metrics-grid" id="topMetrics"></section>
+
+      <section class="tab-strip">
+        <button class="tab is-active" data-tab="performance">Performance</button>
+        <button class="tab" data-tab="operating">Operating points</button>
+        <button class="tab" data-tab="mission">Mission</button>
+        <button class="tab" data-tab="trade">Trade study</button>
+        <button class="tab" data-tab="compare">Scenario comparison</button>
+      </section>
+
+      <section class="tab-panel is-active" id="tab-performance">
+        <div class="panel">
+          <h2>Performance summary</h2>
+          <div id="performanceCards" class="mini-metrics"></div>
+          <div class="table-wrap"><table id="performanceSummaryTable"></table></div>
+        </div>
+        <div class="panel">
+          <h2>Speed sweep</h2>
+          <div class="chart-grid">
+            <canvas id="powerChart"></canvas>
+            <canvas id="enduranceChart"></canvas>
+            <canvas id="rangeChart"></canvas>
+          </div>
+          <div class="table-actions">
+            <button class="btn btn--small" id="downloadSweepBtn">Download speed sweep CSV</button>
+          </div>
+          <div class="table-wrap"><table id="sweepTable"></table></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-operating">
+        <div class="panel">
+          <h2>Operating-point summary</h2>
+          <div class="table-actions">
+            <button class="btn btn--small" id="downloadOperatingBtn">Download operating points CSV</button>
+          </div>
+          <div class="table-wrap"><table id="operatingTable"></table></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-mission">
+        <div class="panel">
+          <h2>Mission feasibility</h2>
+          <div id="missionMetrics" class="mini-metrics"></div>
+          <div class="table-wrap"><table id="missionTotalsTable"></table></div>
+        </div>
+        <div class="panel">
+          <h2>Segment results</h2>
+          <div class="chart-grid">
+            <canvas id="segmentEnergyChart"></canvas>
+            <canvas id="remainingEnergyChart"></canvas>
+          </div>
+          <div class="table-actions">
+            <button class="btn btn--small" id="downloadMissionBtn">Download mission segments CSV</button>
+          </div>
+          <div class="table-wrap"><table id="missionSegmentsTable"></table></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-trade">
+        <div class="panel">
+          <h2>Trade study</h2>
+          <div class="trade-controls">
+            <label class="field"><span>Parameter</span><select id="tradeParameter"></select></label>
+            <label class="field"><span>Minimum</span><input id="tradeMin" type="number" step="any"></label>
+            <label class="field"><span>Maximum</span><input id="tradeMax" type="number" step="any"></label>
+            <label class="field"><span>Points</span><input id="tradePoints" type="number" min="3" max="100" value="15"></label>
+            <div class="field field--button"><span>&nbsp;</span><button id="runTradeBtn" class="btn">Run trade study</button></div>
+          </div>
+          <div class="chart-grid">
+            <canvas id="tradeRangeChart"></canvas>
+            <canvas id="tradeMissionChart"></canvas>
+          </div>
+          <div class="table-actions">
+            <button class="btn btn--small" id="downloadTradeBtn">Download trade study CSV</button>
+          </div>
+          <div class="table-wrap"><table id="tradeTable"></table></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-compare">
+        <div class="panel">
+          <h2>Scenario comparison</h2>
+          <p class="muted">Compare any saved browser scenarios.</p>
+          <label class="field">
+            <span>Choose scenarios</span>
+            <select id="compareScenarios" multiple size="6"></select>
+          </label>
+          <div class="chart-grid">
+            <canvas id="scenarioEnergyChart"></canvas>
+            <canvas id="scenarioTimeChart"></canvas>
+          </div>
+          <div class="table-actions">
+            <button class="btn btn--small" id="downloadCompareBtn">Download comparison CSV</button>
+          </div>
+          <div class="table-wrap"><table id="compareTable"></table></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <template id="metricCardTemplate">
+    <article class="metric-card">
+      <span class="metric-card__label"></span>
+      <strong class="metric-card__value"></strong>
+    </article>
+  </template>
+
+  <script src="js/configs.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
