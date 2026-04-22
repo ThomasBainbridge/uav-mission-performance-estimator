@@ -1,514 +1,327 @@
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Preset configurations
+// ─────────────────────────────────────────────────────────────────────────────
 const PRESET_CONFIGS = {
-  // ── Baseline fixed-wing ────────────────────────────────────────────────────
-  // Standard 6.5 kg aircraft, sea-level ISA, calm wind, best-range cruise mode.
-  "example_fixed_wing": {
-    "aircraft": {
-      "empty_mass_kg": 4.0,
-      "payload_mass_kg": 1.0,
-      "battery_mass_kg": 1.5,
-      "battery_specific_energy_wh_per_kg": 220.0,
-      "wing_area_m2": 0.8,
-      "aspect_ratio": 8.0,
-      "oswald_efficiency": 0.8,
-      "cd0": 0.03,
-      "cl_max": 1.4,
-      "eta_total": 0.7,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "loiter_payload_load_w": 20.0
+
+  // ── Baseline validation preset ────────────────────────────────────────────
+  example_fixed_wing: {
+    aircraft: {
+      empty_mass_kg:                    1.2,
+      payload_mass_kg:                  0.5,
+      battery_mass_kg:                  0.8,
+      battery_specific_energy_wh_per_kg: 200,
+      wing_area_m2:                     0.55,
+      aspect_ratio:                     8.0,
+      oswald_efficiency:                0.8,
+      cd0:                              0.03,
+      cl_max:                           1.4,
+      eta_total:                        0.65,
+      hotel_load_w:                     5.0,
+      payload_load_w:                   10.0,
+      loiter_payload_load_w:            15.0,
+      peukert_exponent:                 1.0,
     },
-    "environment": {
-      "altitude_m": 0.0,
-      "wind_speed_m_per_s": 0.0,
-      "g_m_per_s2": 9.81
+    environment: {
+      altitude_m:                       0,
+      air_density_kg_per_m3:            null,
+      wind_speed_m_per_s:               0.0,
+      g_m_per_s2:                       9.81,
     },
-    "mission": {
-      "usable_battery_fraction": 0.85,
-      "reserve_energy_wh": 30.0,
-      "reserve_fraction": null,
-      "cruise_speed_m_per_s": 20.0,
-      "required_distance_km": 100.0,
-      "profile": {
-        "climb_altitude_m": 500.0,
-        "climb_rate_m_per_s": 2.0,
-        "outbound_distance_km": 25.0,
-        "outbound_altitude_m": 500.0,
-        "loiter_duration_min": 15.0,
-        "loiter_altitude_m": 500.0,
-        "return_distance_km": 25.0,
-        "return_altitude_m": 500.0,
-        "descent_altitude_m": 500.0,
-        "descent_rate_m_per_s": 2.5,
-        "descent_power_factor": 0.7,
-        "outbound_wind_speed_m_per_s": 3.0,
-        "return_wind_speed_m_per_s": -2.0,
-        "cruise_mode": "best_range"
-      }
-    }
+    mission: {
+      usable_battery_fraction:          0.9,
+      reserve_energy_wh:                15.0,
+      reserve_fraction:                 null,
+      cruise_speed_m_per_s:             15.0,
+      required_distance_km:             30.0,
+      profile: {
+        cruise_mode:                    "best_range",
+        climb_altitude_m:               150,
+        climb_rate_m_per_s:             2.0,
+        outbound_distance_km:           20.0,
+        outbound_altitude_m:            150,
+        loiter_duration_min:            10.0,
+        loiter_altitude_m:              150,
+        return_distance_km:             20.0,
+        return_altitude_m:              150,
+        return_payload_mass_kg:         null,
+        descent_altitude_m:             150,
+        descent_rate_m_per_s:           2.0,
+        descent_power_factor:           0.1,
+        outbound_wind_speed_m_per_s:    0.0,
+        return_wind_speed_m_per_s:      0.0,
+      },
+    },
   },
 
-  // ── Speed-optimised fixed-wing ─────────────────────────────────────────────
-  // Lighter airframe (3.5 kg empty), higher propulsive efficiency (η = 0.75),
-  // fixed 28 m/s cruise. Shorter mission — optimised for fast point-to-point
-  // delivery rather than loiter endurance. No loiter segment.
-  "example_fixed_wing_fast": {
-    "aircraft": {
-      "empty_mass_kg": 3.5,
-      "payload_mass_kg": 1.0,
-      "battery_mass_kg": 1.5,
-      "battery_specific_energy_wh_per_kg": 220.0,
-      "wing_area_m2": 0.8,
-      "aspect_ratio": 8.0,
-      "oswald_efficiency": 0.8,
-      "cd0": 0.03,
-      "cl_max": 1.4,
-      "eta_total": 0.75,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "loiter_payload_load_w": 20.0
+  // ── High-speed / light ────────────────────────────────────────────────────
+  example_fixed_wing_fast: {
+    aircraft: {
+      empty_mass_kg:                    1.0,
+      payload_mass_kg:                  0.3,
+      battery_mass_kg:                  0.6,
+      battery_specific_energy_wh_per_kg: 210,
+      wing_area_m2:                     0.40,
+      aspect_ratio:                     7.0,
+      oswald_efficiency:                0.78,
+      cd0:                              0.032,
+      cl_max:                           1.3,
+      eta_total:                        0.75,
+      hotel_load_w:                     4.0,
+      payload_load_w:                   8.0,
+      loiter_payload_load_w:            8.0,
+      peukert_exponent:                 1.0,
     },
-    "environment": {
-      "altitude_m": 0.0,
-      "wind_speed_m_per_s": 0.0,
-      "g_m_per_s2": 9.81
+    environment: {
+      altitude_m:                       100,
+      air_density_kg_per_m3:            null,
+      wind_speed_m_per_s:               0.0,
+      g_m_per_s2:                       9.81,
     },
-    "mission": {
-      "usable_battery_fraction": 0.85,
-      "reserve_energy_wh": 25.0,
-      "reserve_fraction": null,
-      "cruise_speed_m_per_s": 28.0,
-      "required_distance_km": 40.0,
-      "profile": {
-        "climb_altitude_m": 300.0,
-        "climb_rate_m_per_s": 3.0,
-        "outbound_distance_km": 15.0,
-        "outbound_altitude_m": 300.0,
-        "loiter_duration_min": null,
-        "loiter_altitude_m": null,
-        "return_distance_km": 15.0,
-        "return_altitude_m": 300.0,
-        "descent_altitude_m": 300.0,
-        "descent_rate_m_per_s": 3.0,
-        "descent_power_factor": 0.6,
-        "outbound_wind_speed_m_per_s": 0.0,
-        "return_wind_speed_m_per_s": 0.0,
-        "cruise_mode": "fixed_speed"
-      }
-    }
+    mission: {
+      usable_battery_fraction:          0.88,
+      reserve_energy_wh:                10.0,
+      reserve_fraction:                 null,
+      cruise_speed_m_per_s:             28.0,
+      required_distance_km:             35.0,
+      profile: {
+        cruise_mode:                    "best_range",
+        climb_altitude_m:               100,
+        climb_rate_m_per_s:             2.5,
+        outbound_distance_km:           25.0,
+        outbound_altitude_m:            100,
+        loiter_duration_min:            null,
+        loiter_altitude_m:              null,
+        return_distance_km:             25.0,
+        return_altitude_m:              100,
+        return_payload_mass_kg:         null,
+        descent_altitude_m:             100,
+        descent_rate_m_per_s:           2.5,
+        descent_power_factor:           0.08,
+        outbound_wind_speed_m_per_s:    0.0,
+        return_wind_speed_m_per_s:      0.0,
+      },
+    },
   },
 
-  // ── Long-range fixed-wing ──────────────────────────────────────────────────
-  // High-aspect-ratio wing (AR 12), low parasite drag (Cd0 0.025), large
-  // battery pack (2.5 kg @ 250 Wh/kg). Reserve set via fraction (no fixed Wh).
-  // Flies best-range speed for maximum ground coverage at 500 m altitude.
-  "example_fixed_wing_long_range": {
-    "aircraft": {
-      "empty_mass_kg": 4.5,
-      "payload_mass_kg": 1.0,
-      "battery_mass_kg": 2.5,
-      "battery_specific_energy_wh_per_kg": 250.0,
-      "wing_area_m2": 0.9,
-      "aspect_ratio": 12.0,
-      "oswald_efficiency": 0.85,
-      "cd0": 0.025,
-      "cl_max": 1.5,
-      "eta_total": 0.72,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "loiter_payload_load_w": 20.0
+  // ── Long-range / high-AR ──────────────────────────────────────────────────
+  example_fixed_wing_long_range: {
+    aircraft: {
+      empty_mass_kg:                    1.4,
+      payload_mass_kg:                  0.4,
+      battery_mass_kg:                  1.2,
+      battery_specific_energy_wh_per_kg: 250,
+      wing_area_m2:                     0.70,
+      aspect_ratio:                     12.0,
+      oswald_efficiency:                0.82,
+      cd0:                              0.025,
+      cl_max:                           1.5,
+      eta_total:                        0.68,
+      hotel_load_w:                     5.0,
+      payload_load_w:                   8.0,
+      loiter_payload_load_w:            12.0,
+      peukert_exponent:                 1.0,
     },
-    "environment": {
-      "altitude_m": 500.0,
-      "wind_speed_m_per_s": 0.0,
-      "g_m_per_s2": 9.81
+    environment: {
+      altitude_m:                       200,
+      air_density_kg_per_m3:            null,
+      wind_speed_m_per_s:               2.0,
+      g_m_per_s2:                       9.81,
     },
-    "mission": {
-      "usable_battery_fraction": 0.9,
-      "reserve_energy_wh": null,
-      "reserve_fraction": 0.1,
-      "cruise_speed_m_per_s": 16.0,
-      "required_distance_km": 180.0,
-      "profile": {
-        "climb_altitude_m": 500.0,
-        "climb_rate_m_per_s": 1.5,
-        "outbound_distance_km": 60.0,
-        "outbound_altitude_m": 500.0,
-        "loiter_duration_min": 10.0,
-        "loiter_altitude_m": 500.0,
-        "return_distance_km": 60.0,
-        "return_altitude_m": 500.0,
-        "descent_altitude_m": 500.0,
-        "descent_rate_m_per_s": 2.0,
-        "descent_power_factor": 0.6,
-        "outbound_wind_speed_m_per_s": 0.0,
-        "return_wind_speed_m_per_s": 0.0,
-        "cruise_mode": "best_range"
-      }
-    }
+    mission: {
+      usable_battery_fraction:          0.92,
+      reserve_energy_wh:                20.0,
+      reserve_fraction:                 null,
+      cruise_speed_m_per_s:             14.0,
+      required_distance_km:             60.0,
+      profile: {
+        cruise_mode:                    "best_range",
+        climb_altitude_m:               200,
+        climb_rate_m_per_s:             1.8,
+        outbound_distance_km:           40.0,
+        outbound_altitude_m:            200,
+        loiter_duration_min:            5.0,
+        loiter_altitude_m:              200,
+        return_distance_km:             40.0,
+        return_altitude_m:              200,
+        return_payload_mass_kg:         null,
+        descent_altitude_m:             200,
+        descent_rate_m_per_s:           2.0,
+        descent_power_factor:           0.1,
+        outbound_wind_speed_m_per_s:    2.0,
+        return_wind_speed_m_per_s:      -2.0,
+      },
+    },
   },
 
-  // ── Standard tactical mission ──────────────────────────────────────────────
-  // Baseline aircraft, moderate outbound headwind (3 m/s), tailwind return
-  // (-3 m/s). 20-minute loiter. Required distance 80 km — achievable with
-  // a realistic energy margin.
-  "mission_baseline": {
-    "aircraft": {
-      "empty_mass_kg": 4.0,
-      "payload_mass_kg": 1.0,
-      "battery_mass_kg": 1.5,
-      "battery_specific_energy_wh_per_kg": 220.0,
-      "wing_area_m2": 0.8,
-      "aspect_ratio": 8.0,
-      "oswald_efficiency": 0.8,
-      "cd0": 0.03,
-      "cl_max": 1.4,
-      "eta_total": 0.7,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "loiter_payload_load_w": 20.0
+  // ── Mission baseline with wind ────────────────────────────────────────────
+  mission_baseline: {
+    aircraft: {
+      empty_mass_kg:                    1.2,
+      payload_mass_kg:                  0.5,
+      battery_mass_kg:                  0.8,
+      battery_specific_energy_wh_per_kg: 200,
+      wing_area_m2:                     0.55,
+      aspect_ratio:                     8.0,
+      oswald_efficiency:                0.80,
+      cd0:                              0.030,
+      cl_max:                           1.4,
+      eta_total:                        0.65,
+      hotel_load_w:                     5.0,
+      payload_load_w:                   10.0,
+      loiter_payload_load_w:            15.0,
+      peukert_exponent:                 1.0,
     },
-    "environment": {
-      "altitude_m": 0.0,
-      "wind_speed_m_per_s": 3.0,
-      "g_m_per_s2": 9.81
+    environment: {
+      altitude_m:                       100,
+      air_density_kg_per_m3:            null,
+      wind_speed_m_per_s:               3.0,
+      g_m_per_s2:                       9.81,
     },
-    "mission": {
-      "usable_battery_fraction": 0.85,
-      "reserve_energy_wh": 30.0,
-      "reserve_fraction": null,
-      "cruise_speed_m_per_s": 20.0,
-      "required_distance_km": 80.0,
-      "profile": {
-        "climb_altitude_m": 500.0,
-        "climb_rate_m_per_s": 2.0,
-        "outbound_distance_km": 30.0,
-        "outbound_altitude_m": 500.0,
-        "loiter_duration_min": 20.0,
-        "loiter_altitude_m": 500.0,
-        "return_distance_km": 30.0,
-        "return_altitude_m": 500.0,
-        "descent_altitude_m": 500.0,
-        "descent_rate_m_per_s": 2.5,
-        "descent_power_factor": 0.7,
-        "outbound_wind_speed_m_per_s": 3.0,
-        "return_wind_speed_m_per_s": -3.0,
-        "cruise_mode": "best_range"
-      }
-    }
+    mission: {
+      usable_battery_fraction:          0.90,
+      reserve_energy_wh:                15.0,
+      reserve_fraction:                 null,
+      cruise_speed_m_per_s:             15.0,
+      required_distance_km:             30.0,
+      profile: {
+        cruise_mode:                    "best_wind_adjusted_range",
+        climb_altitude_m:               100,
+        climb_rate_m_per_s:             2.0,
+        outbound_distance_km:           20.0,
+        outbound_altitude_m:            100,
+        loiter_duration_min:            20.0,
+        loiter_altitude_m:              100,
+        return_distance_km:             20.0,
+        return_altitude_m:              100,
+        return_payload_mass_kg:         null,
+        descent_altitude_m:             100,
+        descent_rate_m_per_s:           2.0,
+        descent_power_factor:           0.10,
+        outbound_wind_speed_m_per_s:    3.0,
+        return_wind_speed_m_per_s:      -3.0,
+      },
+    },
   },
 
-  // ── Surveillance / persistent loiter ──────────────────────────────────────
-  // Baseline aircraft with higher loiter payload power (35 W active sensor).
-  // Extended 45-minute loiter with short transit legs. Demonstrates energy
-  // budget stress from sustained high-power payload operation during loiter.
-  "mission_loiter": {
-    "aircraft": {
-      "empty_mass_kg": 4.0,
-      "payload_mass_kg": 1.0,
-      "battery_mass_kg": 1.5,
-      "battery_specific_energy_wh_per_kg": 220.0,
-      "wing_area_m2": 0.8,
-      "aspect_ratio": 8.0,
-      "oswald_efficiency": 0.8,
-      "cd0": 0.03,
-      "cl_max": 1.4,
-      "eta_total": 0.7,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "loiter_payload_load_w": 35.0
+  // ── Loiter-heavy ISR with payload drop ────────────────────────────────────
+  mission_loiter: {
+    aircraft: {
+      empty_mass_kg:                    1.3,
+      payload_mass_kg:                  0.8,
+      battery_mass_kg:                  0.9,
+      battery_specific_energy_wh_per_kg: 210,
+      wing_area_m2:                     0.60,
+      aspect_ratio:                     9.0,
+      oswald_efficiency:                0.81,
+      cd0:                              0.028,
+      cl_max:                           1.45,
+      eta_total:                        0.66,
+      hotel_load_w:                     6.0,
+      payload_load_w:                   12.0,
+      loiter_payload_load_w:            35.0,
+      peukert_exponent:                 1.04,
     },
-    "environment": {
-      "altitude_m": 0.0,
-      "wind_speed_m_per_s": 0.0,
-      "g_m_per_s2": 9.81
+    environment: {
+      altitude_m:                       120,
+      air_density_kg_per_m3:            null,
+      wind_speed_m_per_s:               1.5,
+      g_m_per_s2:                       9.81,
     },
-    "mission": {
-      "usable_battery_fraction": 0.85,
-      "reserve_energy_wh": 30.0,
-      "reserve_fraction": null,
-      "cruise_speed_m_per_s": 20.0,
-      "required_distance_km": 30.0,
-      "profile": {
-        "climb_altitude_m": 200.0,
-        "climb_rate_m_per_s": 2.0,
-        "outbound_distance_km": 10.0,
-        "outbound_altitude_m": 200.0,
-        "loiter_duration_min": 45.0,
-        "loiter_altitude_m": 200.0,
-        "return_distance_km": 10.0,
-        "return_altitude_m": 200.0,
-        "descent_altitude_m": 200.0,
-        "descent_rate_m_per_s": 2.0,
-        "descent_power_factor": 0.7,
-        "outbound_wind_speed_m_per_s": 0.0,
-        "return_wind_speed_m_per_s": 0.0,
-        "cruise_mode": "best_range"
-      }
-    }
+    mission: {
+      usable_battery_fraction:          0.90,
+      reserve_energy_wh:                18.0,
+      reserve_fraction:                 null,
+      cruise_speed_m_per_s:             14.0,
+      required_distance_km:             25.0,
+      profile: {
+        cruise_mode:                    "best_range",
+        climb_altitude_m:               120,
+        climb_rate_m_per_s:             1.8,
+        outbound_distance_km:           15.0,
+        outbound_altitude_m:            120,
+        loiter_duration_min:            45.0,
+        loiter_altitude_m:              120,
+        return_distance_km:             15.0,
+        return_altitude_m:              120,
+        return_payload_mass_kg:         0.3,
+        descent_altitude_m:             120,
+        descent_rate_m_per_s:           2.0,
+        descent_power_factor:           0.10,
+        outbound_wind_speed_m_per_s:    1.5,
+        return_wind_speed_m_per_s:      -1.5,
+      },
+    },
   },
 
-  // ── High-wind conditions ───────────────────────────────────────────────────
-  // Baseline aircraft into a strong 8 m/s outbound headwind with matching
-  // tailwind on return. Environment general wind is 5 m/s. Demonstrates the
-  // asymmetric time/energy split — outbound leg takes much longer than return.
-  // The top-level wind-adjusted range (single-leg estimate) will show marginal
-  // feasibility; the segmented profile reveals the true energy balance.
-  "mission_windy": {
-    "aircraft": {
-      "empty_mass_kg": 4.0,
-      "payload_mass_kg": 1.0,
-      "battery_mass_kg": 1.5,
-      "battery_specific_energy_wh_per_kg": 220.0,
-      "wing_area_m2": 0.8,
-      "aspect_ratio": 8.0,
-      "oswald_efficiency": 0.8,
-      "cd0": 0.03,
-      "cl_max": 1.4,
-      "eta_total": 0.7,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "loiter_payload_load_w": 20.0
+  // ── High-wind delivery with payload drop ─────────────────────────────────
+  mission_windy: {
+    aircraft: {
+      empty_mass_kg:                    1.2,
+      payload_mass_kg:                  0.6,
+      battery_mass_kg:                  0.9,
+      battery_specific_energy_wh_per_kg: 210,
+      wing_area_m2:                     0.55,
+      aspect_ratio:                     8.5,
+      oswald_efficiency:                0.79,
+      cd0:                              0.031,
+      cl_max:                           1.4,
+      eta_total:                        0.66,
+      hotel_load_w:                     5.0,
+      payload_load_w:                   12.0,
+      loiter_payload_load_w:            12.0,
+      peukert_exponent:                 1.05,
     },
-    "environment": {
-      "altitude_m": 0.0,
-      "wind_speed_m_per_s": 5.0,
-      "g_m_per_s2": 9.81
+    environment: {
+      altitude_m:                       80,
+      air_density_kg_per_m3:            null,
+      wind_speed_m_per_s:               8.0,
+      g_m_per_s2:                       9.81,
     },
-    "mission": {
-      "usable_battery_fraction": 0.85,
-      "reserve_energy_wh": 30.0,
-      "reserve_fraction": null,
-      "cruise_speed_m_per_s": 20.0,
-      "required_distance_km": 60.0,
-      "profile": {
-        "climb_altitude_m": 500.0,
-        "climb_rate_m_per_s": 2.0,
-        "outbound_distance_km": 20.0,
-        "outbound_altitude_m": 500.0,
-        "loiter_duration_min": 10.0,
-        "loiter_altitude_m": 500.0,
-        "return_distance_km": 20.0,
-        "return_altitude_m": 500.0,
-        "descent_altitude_m": 500.0,
-        "descent_rate_m_per_s": 2.5,
-        "descent_power_factor": 0.7,
-        "outbound_wind_speed_m_per_s": 8.0,
-        "return_wind_speed_m_per_s": -8.0,
-        "cruise_mode": "best_range"
-      }
-    }
-  }
-}
-;
+    mission: {
+      usable_battery_fraction:          0.90,
+      reserve_energy_wh:                16.0,
+      reserve_fraction:                 null,
+      cruise_speed_m_per_s:             18.0,
+      required_distance_km:             20.0,
+      profile: {
+        cruise_mode:                    "best_wind_adjusted_range",
+        climb_altitude_m:               80,
+        climb_rate_m_per_s:             2.2,
+        outbound_distance_km:           12.0,
+        outbound_altitude_m:            80,
+        loiter_duration_min:            5.0,
+        loiter_altitude_m:              80,
+        return_distance_km:             12.0,
+        return_altitude_m:              80,
+        return_payload_mass_kg:         0.0,
+        descent_altitude_m:             80,
+        descent_rate_m_per_s:           2.5,
+        descent_power_factor:           0.12,
+        outbound_wind_speed_m_per_s:    8.0,
+        return_wind_speed_m_per_s:      -8.0,
+      },
+    },
+  },
+
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reference outputs for validation (example_fixed_wing only)
+// Peukert exponent = 1.0 → factor = 1.0, so all values match prior baseline.
+// ─────────────────────────────────────────────────────────────────────────────
 const EXPECTED_OUTPUTS = {
-  "example_fixed_wing": {
-    "total_mass_kg": 6.5,
-    "weight_n": 63.765,
-    "resolved_air_density_kg_per_m3": 1.2250122659906946,
-    "stall_speed_m_per_s": 9.64110804424166,
-    "minimum_recommended_cruise_speed_m_per_s": 12.533440457514159,
-    "battery_nominal_energy_wh": 330.0,
-    "battery_usable_energy_wh": 280.5,
-    "reserve_energy_wh": 30.0,
-    "battery_available_for_mission_wh": 250.5,
-    "air_power_required_w": 138.2361767686842,
-    "propulsion_electrical_power_required_w": 197.48025252669174,
-    "hotel_load_w": 15.0,
-    "payload_load_w": 10.0,
-    "non_propulsive_electrical_load_w": 25.0,
-    "electrical_power_required_w": 222.48025252669174,
-    "endurance_h": 1.1259426270650543,
-    "still_air_range_km": 81.06786914868391,
-    "wind_adjusted_range_km": 81.06786914868391,
-    "required_mission_time_h": 1.3888888888888888,
-    "required_mission_energy_wh": 309.0003507315163,
-    "range_margin_km": -18.93213085131609,
-    "energy_margin_wh": -58.50035073151628,
-    "is_mission_feasible": false,
-    "best_endurance": {
-      "airspeed_m_per_s": 12.533440457514159,
-      "air_power_w": 61.870178769839555,
-      "propulsion_electrical_power_w": 88.38596967119938,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "non_propulsive_electrical_load_w": 25.0,
-      "electrical_power_w": 113.38596967119938,
-      "endurance_h": 2.209268049004729,
-      "still_air_range_km": 99.68302636880128,
-      "wind_adjusted_range_km": 99.68302636880128
+  example_fixed_wing: {
+    total_mass_kg:                2.5,
+    stall_speed_m_per_s:          10.066631938831836,
+    electrical_power_required_w:  78.25756060090337,
+    still_air_range_km:           28.71476226337985,
+    best_endurance: {
+      airspeed_m_per_s:           11.630475743370018,
     },
-    "best_range": {
-      "airspeed_m_per_s": 13.687497581148017,
-      "air_power_w": 67.84747920479407,
-      "propulsion_electrical_power_w": 96.92497029256296,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "non_propulsive_electrical_load_w": 25.0,
-      "electrical_power_w": 121.92497029256296,
-      "endurance_h": 2.0545422270673273,
-      "still_air_range_km": 101.2375503480618,
-      "wind_adjusted_range_km": 101.2375503480618
+    mission_profile: {
+      total_energy_used_wh:       113.47263671325975,
+      remaining_energy_wh:        15.127363286740247,
     },
-    "best_wind_adjusted": {
-      "airspeed_m_per_s": 13.687497581148017,
-      "air_power_w": 67.84747920479407,
-      "propulsion_electrical_power_w": 96.92497029256296,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "non_propulsive_electrical_load_w": 25.0,
-      "electrical_power_w": 121.92497029256296,
-      "endurance_h": 2.0545422270673273,
-      "still_air_range_km": 101.2375503480618,
-      "wind_adjusted_range_km": 101.2375503480618
-    },
-    "speed_sweep_row_0": {
-      "airspeed_m_per_s": 9.64110804424166,
-      "lift_coefficient": 1.4,
-      "induced_drag_factor": 0.0497359197162173,
-      "drag_coefficient": 0.1274824026437859,
-      "drag_force_n": 5.806368146129293,
-      "air_power_w": 55.97982264147566,
-      "propulsion_electrical_power_w": 79.97117520210809,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "non_propulsive_electrical_load_w": 25.0,
-      "electrical_power_w": 104.97117520210809,
-      "endurance_h": 2.386369396338523,
-      "still_air_range_km": 82.82608266085722,
-      "wind_adjusted_ground_speed_m_per_s": 9.64110804424166,
-      "wind_adjusted_range_km": 82.82608266085722
-    },
-    "speed_sweep_row_last": {
-      "airspeed_m_per_s": 40.0,
-      "lift_coefficient": 0.08133209378064858,
-      "induced_drag_factor": 0.0497359197162173,
-      "drag_coefficient": 0.030328998606764867,
-      "drag_force_n": 23.778172997441057,
-      "air_power_w": 951.1269198976423,
-      "propulsion_electrical_power_w": 1358.7527427109178,
-      "hotel_load_w": 15.0,
-      "payload_load_w": 10.0,
-      "non_propulsive_electrical_load_w": 25.0,
-      "electrical_power_w": 1383.7527427109178,
-      "endurance_h": 0.18102945148223812,
-      "still_air_range_km": 26.06824101344229,
-      "wind_adjusted_ground_speed_m_per_s": 40.0,
-      "wind_adjusted_range_km": 26.06824101344229
-    },
-    "mission_profile": {
-      "available_energy_wh": 250.5,
-      "total_time_h": 1.4229670850991558,
-      "total_energy_used_wh": 200.54884928864922,
-      "total_propulsion_energy_wh": 162.4746721611703,
-      "total_hotel_energy_wh": 21.344506276487333,
-      "total_payload_energy_wh": 16.72967085099156,
-      "total_non_propulsive_energy_wh": 38.07417712747889,
-      "remaining_energy_wh": 49.9511507113508,
-      "mission_feasible": true,
-      "segments": [
-        {
-          "segment_name": "climb",
-          "segment_type": "climb",
-          "speed_mode": "fixed_climb",
-          "climb_altitude_m": 500.0,
-          "climb_rate_m_per_s": 2.0,
-          "electrical_power_w": 404.66596681240605,
-          "time_h": 0.06944444444444445,
-          "energy_used_wh": 28.101803250861533,
-          "propulsion_electrical_power_w": 379.66596681240605,
-          "hotel_load_w": 15.0,
-          "payload_load_w": 10.0,
-          "non_propulsive_electrical_load_w": 25.0,
-          "propulsion_energy_wh": 26.365692139750422,
-          "hotel_energy_wh": 1.0416666666666667,
-          "payload_energy_wh": 0.6944444444444444,
-          "non_propulsive_energy_wh": 1.7361111111111112,
-          "remaining_energy_wh_after_segment": 222.39819674913846
-        },
-        {
-          "segment_name": "outbound",
-          "segment_type": "cruise",
-          "speed_mode": "best_range",
-          "distance_km": 25.0,
-          "altitude_m": 500.0,
-          "airspeed_m_per_s": 14.209075199571421,
-          "ground_speed_m_per_s": 11.209075199571421,
-          "electrical_power_w": 125.95055560934857,
-          "time_h": 0.6195376800317982,
-          "energy_used_wh": 78.03111502093181,
-          "propulsion_electrical_power_w": 100.95055560934857,
-          "hotel_load_w": 15.0,
-          "payload_load_w": 10.0,
-          "non_propulsive_electrical_load_w": 25.0,
-          "propulsion_energy_wh": 62.542673020136846,
-          "hotel_energy_wh": 9.293065200476974,
-          "payload_energy_wh": 6.195376800317982,
-          "non_propulsive_energy_wh": 15.488442000794954,
-          "remaining_energy_wh_after_segment": 144.36708172820664
-        },
-        {
-          "segment_name": "loiter",
-          "segment_type": "loiter",
-          "speed_mode": "best_endurance",
-          "duration_min": 15.0,
-          "altitude_m": 500.0,
-          "airspeed_m_per_s": 12.839645564150434,
-          "electrical_power_w": 125.54533168836159,
-          "time_h": 0.25,
-          "energy_used_wh": 31.386332922090396,
-          "propulsion_electrical_power_w": 90.54533168836159,
-          "hotel_load_w": 15.0,
-          "payload_load_w": 20.0,
-          "non_propulsive_electrical_load_w": 35.0,
-          "propulsion_energy_wh": 22.636332922090396,
-          "hotel_energy_wh": 3.75,
-          "payload_energy_wh": 5.0,
-          "non_propulsive_energy_wh": 8.75,
-          "remaining_energy_wh_after_segment": 112.98074880611625
-        },
-        {
-          "segment_name": "return",
-          "segment_type": "cruise",
-          "speed_mode": "best_range",
-          "distance_km": 25.0,
-          "altitude_m": 500.0,
-          "airspeed_m_per_s": 14.209075199571421,
-          "ground_speed_m_per_s": 16.209075199571423,
-          "electrical_power_w": 125.95055560934857,
-          "time_h": 0.4284294050673575,
-          "energy_used_wh": 53.960921607616335,
-          "propulsion_electrical_power_w": 100.95055560934857,
-          "hotel_load_w": 15.0,
-          "payload_load_w": 10.0,
-          "non_propulsive_electrical_load_w": 25.0,
-          "propulsion_energy_wh": 43.2501864809324,
-          "hotel_energy_wh": 6.426441076010362,
-          "payload_energy_wh": 4.284294050673575,
-          "non_propulsive_energy_wh": 10.710735126683938,
-          "remaining_energy_wh_after_segment": 59.01982719849992
-        },
-        {
-          "segment_name": "descent",
-          "segment_type": "descent",
-          "speed_mode": "fixed_descent",
-          "descent_altitude_m": 500.0,
-          "descent_rate_m_per_s": 2.5,
-          "descent_power_factor": 0.7,
-          "electrical_power_w": 163.2361767686842,
-          "time_h": 0.05555555555555555,
-          "energy_used_wh": 9.068676487149121,
-          "propulsion_electrical_power_w": 138.2361767686842,
-          "hotel_load_w": 15.0,
-          "payload_load_w": 10.0,
-          "non_propulsive_electrical_load_w": 25.0,
-          "propulsion_energy_wh": 7.6797875982602335,
-          "hotel_energy_wh": 0.8333333333333333,
-          "payload_energy_wh": 0.5555555555555556,
-          "non_propulsive_energy_wh": 1.3888888888888888,
-          "remaining_energy_wh_after_segment": 49.9511507113508
-        }
-      ]
-    }
-  }
-}
-;
+  },
+};
