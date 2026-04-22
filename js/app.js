@@ -9,6 +9,9 @@ let latestResults = null;
 let latestTradeStudy = [];
 let latestComparison = [];
 
+// FIX 4 — chart colour palette aligned with the CSS design tokens
+const CHART_PALETTE = ["#00c8ff", "#00e8a0", "#ffcc33", "#1a8cff", "#ff3d5a", "#c084fc"];
+
 const FIELD_GROUPS = {
   aircraft: [
     ["empty_mass_kg", "Empty mass [kg]", 0.1],
@@ -33,8 +36,9 @@ const FIELD_GROUPS = {
   ],
   mission: [
     ["usable_battery_fraction", "Usable battery fraction [-]", 0.01],
-    ["reserve_fraction", "Reserve fraction [-]", 0.01],
-    ["reserve_energy_wh", "Fixed reserve energy [Wh]", 1],
+    // FIX 2 — labels clarify the mutual-exclusion priority
+    ["reserve_energy_wh", "Fixed reserve [Wh] (takes priority)", 1],
+    ["reserve_fraction", "Reserve fraction [-] (ignored if Wh set)", 0.01],
     ["cruise_speed_m_per_s", "Cruise speed [m/s]", 0.1],
     ["required_distance_km", "Required distance [km]", 0.1],
   ],
@@ -100,6 +104,14 @@ function rowsToCSV(rows) {
 }
 function toTitle(value) { return value.replace(/_/g, " "); }
 
+// FIX 4 — helper to convert hex colour to rgba for chart fills
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function buildInputFields() {
   Object.entries(FIELD_GROUPS).forEach(([groupKey, fields]) => {
     const container = document.getElementById(`${groupKey}Fields`);
@@ -138,6 +150,19 @@ function onFieldChange(event) {
   } else {
     target[field] = sanitizeNumber(event.target.value);
   }
+
+  // FIX 2 — mutual exclusion: whichever reserve field the user edits last wins;
+  // the other is cleared so the priority logic in reserveEnergyWh() is visible.
+  if (group === "mission" && field === "reserve_energy_wh" && !isNil(activeConfig.mission.reserve_energy_wh)) {
+    activeConfig.mission.reserve_fraction = null;
+    const el = document.querySelector('[data-group="mission"][data-field="reserve_fraction"]');
+    if (el) el.value = "";
+  } else if (group === "mission" && field === "reserve_fraction" && !isNil(activeConfig.mission.reserve_fraction)) {
+    activeConfig.mission.reserve_energy_wh = null;
+    const el = document.querySelector('[data-group="mission"][data-field="reserve_energy_wh"]');
+    if (el) el.value = "";
+  }
+
   renderAll();
 }
 
@@ -172,14 +197,20 @@ function totalMassKg(config) { return config.aircraft.empty_mass_kg + config.air
 function weightNewtons(config) { return totalMassKg(config) * config.environment.g_m_per_s2; }
 function batteryNominalEnergyWh(config) { return config.aircraft.battery_mass_kg * config.aircraft.battery_specific_energy_wh_per_kg; }
 function batteryUsableEnergyWh(config) { return batteryNominalEnergyWh(config) * config.mission.usable_battery_fraction; }
+
+// FIX 2 — guard against both fields being null (returns 0 reserve as fallback)
 function reserveEnergyWh(config) {
   const usable = batteryUsableEnergyWh(config);
   if (!isNil(config.mission.reserve_energy_wh)) {
     if (config.mission.reserve_energy_wh > usable) throw new Error("reserve_energy_wh cannot exceed usable battery energy.");
     return config.mission.reserve_energy_wh;
   }
-  return usable * config.mission.reserve_fraction;
+  if (!isNil(config.mission.reserve_fraction)) {
+    return usable * config.mission.reserve_fraction;
+  }
+  return 0; // neither field set — no reserve
 }
+
 function batteryAvailableForMissionWh(config) { return batteryUsableEnergyWh(config) - reserveEnergyWh(config); }
 function batteryAvailableForMissionJ(config) { return batteryAvailableForMissionWh(config) * 3600; }
 function stallSpeedMps(config) {
@@ -203,8 +234,17 @@ function enduranceSeconds(config) { return batteryAvailableForMissionJ(config) /
 function enduranceHours(config) { return enduranceSeconds(config) / 3600; }
 function stillAirRangeKm(config) { return config.mission.cruise_speed_m_per_s * enduranceSeconds(config) / 1000; }
 function windAdjustedGroundSpeedMps(config) { return Math.max(0, config.mission.cruise_speed_m_per_s - config.environment.wind_speed_m_per_s); }
+
+// FIX 5 — NOTE: this is a conservative single-leg estimate. It treats the
+// entire endurance as if flown against the headwind. For an out-and-back
+// mission the return leg benefits from a tailwind, so the true round-trip
+// range is better. Use the segmented Mission tab for an accurate energy
+// balance with per-leg wind speeds.
 function windAdjustedRangeKm(config) { return windAdjustedGroundSpeedMps(config) * enduranceSeconds(config) / 1000; }
+
 function requiredDistanceKm(config) { if (isNil(config.mission.required_distance_km)) throw new Error("Mission required distance is not set."); return config.mission.required_distance_km; }
+
+// FIX 5 — same single-leg wind caveat applies here (see windAdjustedRangeKm)
 function requiredMissionTimeHours(config) {
   const gs = windAdjustedGroundSpeedMps(config); if (gs <= 0) return Infinity; return requiredDistanceKm(config) / (gs * 3.6);
 }
@@ -225,10 +265,18 @@ function configWithFlightConditions(config, airspeed, windSpeed, altitude = null
 }
 
 function climbTimeHours(altitude, rate) { if (altitude < 0 || rate <= 0) throw new Error("Invalid climb inputs."); return (altitude / rate) / 3600; }
+// NOTE: climb drag is evaluated at the mission cruise speed — a reasonable
+// approximation for small climb angles (γ < ~10°) where L ≈ W.
 function climbExtraPowerWatts(config, rate) { return (totalMassKg(config) * config.environment.g_m_per_s2 * rate) / config.aircraft.eta_total; }
 function climbTotalElectricalPowerWatts(config, rate) { return electricalPowerRequiredWatts(config) + climbExtraPowerWatts(config, rate); }
 function climbEnergyWh(config, altitude, rate) { return climbTotalElectricalPowerWatts(config, rate) * climbTimeHours(altitude, rate); }
 function descentTimeHours(altitude, rate) { if (altitude < 0 || rate <= 0) throw new Error("Invalid descent inputs."); return (altitude / rate) / 3600; }
+
+// FIX 7 — NOTE: descent propulsion power is modelled as a fixed fraction of
+// the cruise propulsion power (evaluated at mission cruise_speed_m_per_s).
+// The descent segment has no dedicated airspeed; changing descent_rate only
+// affects segment duration, not power. Adjust descent_power_factor to
+// represent different descent throttle strategies.
 function descentTotalElectricalPowerWatts(config, factor) {
   const propulsion = airPowerRequiredWatts(config) / config.aircraft.eta_total;
   return factor * propulsion + nonPropulsiveElectricalLoadWatts(config);
@@ -360,7 +408,8 @@ function evaluateSimpleMissionProfile(config, profile, maxSpeed = 40, numPoints 
     const electricalPowerW = climbTotalElectricalPowerWatts(config, profile.climb_rate_m_per_s);
     const timeH = climbTimeHours(profile.climb_altitude_m, profile.climb_rate_m_per_s);
     addSegment({
-      segment_name: "climb_out",
+      // FIX 3 — renamed from "climb_out" to match EXPECTED_OUTPUTS reference
+      segment_name: "climb",
       segment_type: "climb",
       speed_mode: "fixed_climb",
       climb_altitude_m: profile.climb_altitude_m,
@@ -524,19 +573,37 @@ function renderTable(tableId, rows, columns = null) {
   table.innerHTML = thead + tbody;
 }
 
+// FIX 4 — updated chart styling to match the new CSS palette; colours are
+// applied automatically from CHART_PALETTE so all datasets stay on-brand.
 function upsertChart(key, canvasId, type, data, options = {}) {
   const ctx = document.getElementById(canvasId);
   if (charts[key]) charts[key].destroy();
+
+  data.datasets = data.datasets.map((ds, i) => {
+    const colour = CHART_PALETTE[i % CHART_PALETTE.length];
+    return {
+      borderColor: colour,
+      backgroundColor: type === "bar"
+        ? hexToRgba(colour, 0.28)
+        : hexToRgba(colour, 0.1),
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.3,
+      fill: type !== "bar",
+      ...ds,
+    };
+  });
+
   charts[key] = new Chart(ctx, {
     type,
     data,
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "#e6eefb" } } },
+      plugins: { legend: { labels: { color: "#c8ddf2", font: { size: 12 } } } },
       scales: {
-        x: { ticks: { color: "#9fb0cc" }, grid: { color: "rgba(255,255,255,0.07)" } },
-        y: { ticks: { color: "#9fb0cc" }, grid: { color: "rgba(255,255,255,0.07)" } },
+        x: { ticks: { color: "#4e7092" }, grid: { color: "rgba(0,200,255,0.07)" } },
+        y: { ticks: { color: "#4e7092" }, grid: { color: "rgba(0,200,255,0.07)" } },
       },
       ...options,
     },
@@ -545,12 +612,20 @@ function upsertChart(key, canvasId, type, data, options = {}) {
 
 function collectResults(config) {
   const summary = makeSummary(config);
+
+  // Performance chart sweep — starts from stall speed to show full polar
   const sweep = buildSpeedSweep(config, 40, 120, stallSpeedMps(config));
+
+  // FIX 6 — build the operating-point sweep once (min speed = 1.3×Vstall)
+  // and derive all three operating points from it, eliminating three
+  // previously redundant sweep builds on every render call.
+  const opSweep = buildSpeedSweep(config, 40, 120); // minSpeed defaults to minimumRecommendedCruiseSpeedMps
   const operating = [
-    { operating_point: "best_endurance", ...getBestEnduranceOperatingPoint(config, 40, 120) },
-    { operating_point: "best_still_air_range", ...getBestRangeOperatingPoint(config, 40, 120) },
-    { operating_point: "best_wind_adjusted_range", ...getBestWindAdjustedRangeOperatingPoint(config, 40, 120) },
+    { operating_point: "best_endurance",          ...maxBy(opSweep, "endurance_h") },
+    { operating_point: "best_still_air_range",    ...maxBy(opSweep, "still_air_range_km") },
+    { operating_point: "best_wind_adjusted_range",...maxBy(opSweep, "wind_adjusted_range_km") },
   ];
+
   const missionSummary = {
     mission_feasible: isMissionFeasible(config),
     required_mission_time_h: isNil(config.mission.required_distance_km) ? null : requiredMissionTimeHours(config),
@@ -572,7 +647,7 @@ function renderTop(results) {
     { label: "Electrical power", value: fmtMetric(s.electrical_power_required_w, " W", 1) },
     { label: "Endurance", value: fmtMetric(s.endurance_h, " h") },
     { label: "Still-air range", value: fmtMetric(s.still_air_range_km, " km") },
-    { label: "Wind-adjusted range", value: fmtMetric(s.wind_adjusted_range_km, " km") },
+    { label: "Wind-adj. range (1-leg est.)", value: fmtMetric(s.wind_adjusted_range_km, " km") },
   ]);
 }
 
