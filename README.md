@@ -1,183 +1,123 @@
-# UAV Performance and Mission Analysis
+# UAV Mission Performance Estimator
 
-A web-based engineering tool for estimating fixed-wing UAV performance and mission-profile behaviour from preliminary design inputs.
-
-This project provides a parametric framework for evaluating UAV flight performance, mission feasibility, and energy consumption using simplified aerodynamic and propulsion models. It is designed for early-stage design studies, trade analysis, and rapid mission assessment.
-
-The tool is deployed as a static web application using HTML, CSS, and JavaScript, enabling immediate access without requiring a Python runtime or backend server.
+A browser-based engineering tool for fixed-wing UAV preliminary performance analysis and segmented mission evaluation. All calculations run client-side — no server, no installation, no runtime dependencies.
 
 ---
 
-## Overview
-
-The model evaluates UAV performance and mission execution by combining:
-
-* steady-level flight performance analysis
-* aerodynamic drag and power estimation
-* endurance and range optimisation
-* segmented mission modelling
-* electrical power and energy accounting
-
-The tool allows users to explore how design parameters and mission definitions influence feasibility, efficiency, and overall system performance.
+**Live demo:** https://thomasbainbridge.github.io/uav-performance-and-mission-analysis/
 
 ---
 
-## Key Features
+## What it does
 
-### Performance Modelling
-
-* Stall speed estimation
-* Cruise speed constraints and recommendations
-* Drag and power requirement calculations
-* Airspeed sweep analysis
-* Identification of:
-
-  * best endurance speed
-  * best range speed
-
-### Mission Analysis
-
-* Segmented mission modelling:
-
-  * outbound
-  * loiter
-  * return
-* Mission feasibility evaluation
-* Total mission time and distance estimation
-* Energy consumption tracking across all mission phases
-
-### Energy and Electrical Modelling
-
-* Propulsion power estimation
-* Hotel (onboard systems) electrical load modelling
-* Payload electrical load modelling
-* Total electrical power and energy breakdown
-* Per-segment and mission-level energy accounting
-
-### Interactive Web Interface
-
-* Browser-based parameter input
-* Instant calculation and updates
-* Clean visual presentation of results
-* No installation or backend required
+Enter your UAV's design parameters and get immediate feedback on flight performance, mission feasibility, and energy consumption. The tool is built around a parametric aerodynamic and energy model suited to early-stage design studies and rapid trade analysis.
 
 ---
 
-## Engineering Scope and Assumptions
+## Features
 
-The model is intended for **preliminary design and trade studies**. Key assumptions include:
+### Performance analysis
 
-* steady, quasi-level flight conditions
-* simplified aerodynamic drag representation
-* reduced-order propulsion modelling
-* ISA-based atmospheric approximation
-* no high-fidelity CFD or transient flight dynamics
+- ISA troposphere atmosphere model (h ≤ 11 000 m), with optional air density override
+- Parabolic drag polar: `CD = CD₀ + CL²/(π·e·AR)`
+- Full speed sweep from stall to 40 m/s — power, endurance, and range polars
+- Three operating points identified numerically: best endurance, best still-air range, best wind-adjusted range
+- Stall speed and minimum safe cruise speed (1.3 × V_stall)
 
-The tool is not intended for detailed design validation but provides rapid insight into system-level behaviour.
+### Energy and battery modelling
 
----
+- Peukert correction: `f = (E_nom / P_total)^(n−1)` — reduces effective capacity at high discharge rates (n = 1 → ideal)
+- Separate hotel load and payload electrical load, with a distinct loiter payload load
+- Fixed reserve energy (Wh) or fractional reserve — mutually exclusive, fixed Wh takes priority
+- Usable and mission-available energy computed per scenario
 
-## Project Evolution
+### Mission profile
 
-The project has been developed in stages, progressing from a Python-based performance estimator to a fully deployable web-based engineering tool.
+- Segmented profile: climb → outbound cruise → loiter → return cruise → descent
+- Per-leg wind speeds for accurate asymmetric round-trip analysis
+- Payload drop mid-mission — set a return payload mass and all post-loiter segments (weight, drag, stall speed) update accordingly
+- Stall margin check on every cruise and loiter segment — amber warning rows in the table where SM < 1.3
+- Three cruise modes: fixed speed, best range, best wind-adjusted range
 
-### Version 1 – Core Performance Estimator
+### Trade studies
 
-* steady level-flight modelling
-* drag, power, endurance, and range calculations
-* airspeed sweeps and optimal speed identification
+- **1D trade study** — sweep any design parameter (battery mass, wing area, aspect ratio, CD₀, efficiency, altitude, cruise speed) across a user-defined range; plots range, endurance, and mission remaining energy
+- **2D trade study** — sweep two parameters simultaneously and render a colour-mapped heatmap of any output metric; binary feasibility renders as red/green
 
-### Version 2 – Mission-Profile Analysis
+### Scenario management
 
-* segmented mission modelling
-* mission energy tracking
-* scenario-based evaluation
+- Six built-in presets covering baseline, high-speed, long-range, windy, loiter-heavy, and delivery missions
+- Save and load named scenarios in browser local storage
+- Compare any two or more saved scenarios side-by-side with charts and a summary table
 
-### Version 3 – Interactive Application Layer
+### Sharing and export
 
-* user interface for parameter input and results visualisation
-* real-time analysis capability
-
-### Version 4 – Extended Mission Modelling
-
-* climb and descent segment modelling
-* altitude-dependent mission phases
-* improved mission definition flexibility
-
-### Version 5 – Electrical Energy Modelling
-
-* inclusion of hotel and payload electrical loads
-* full mission energy breakdown by source
-* improved interpretation of energy usage
-
-### Current Version – Web Deployment
-
-* migration from Python/Streamlit to a static web application
-* browser-based execution of the performance model
-* permanent hosting via GitHub Pages
+- URL state sharing — the active scenario is base64-encoded into the URL so a link reopens the exact configuration
+- CSV download for every result table: speed sweep, operating points, mission segments, trade study, 2D trade, and scenario comparison
+- JSON download of the active scenario configuration
 
 ---
 
-## Project Structure
+## Physics summary
 
-```text
-uav-mission-performance-estimator/
-├── index.html          # Main application interface
-├── styles.css          # Styling and layout
-├── js/
-│   └── app.js          # Core performance and mission model
-├── assets/             # Images and static resources (optional)
-└── README.md
+| Quantity | Model |
+|---|---|
+| Air density | ISA troposphere, or manual override |
+| Lift coefficient | `CL = 2W / (ρV²S)` — level flight (L = W) |
+| Drag | `CD = CD₀ + CL²/(π·e·AR)`,  `D = ½ρV²S·CD` |
+| Power chain | `P_air = D·V`,  `P_total = P_air/η + P_hotel + P_payload` |
+| Energy budget | `E_usable = E_nom × f_usable × f_Peukert` |
+| Climb | `P_climb = P_level + m·g·Vc/η` (small-angle approx, evaluated at cruise speed) |
+| Descent | `P_descent = f_d × (P_air/η) + P_np` |
+| Wind | `V_ground = max(0, V_air − V_wind)` applied per leg |
+
+The model is suited to early-stage design decisions and rapid sensitivity studies — it is not a substitute for high-fidelity CFD or flight dynamics simulation.
+
+---
+
+## File structure
+
+```
+├── index.html       — UI shell, tab layout, methodology collapsible
+├── styles.css       — Design system (Syne · Space Grotesk · DM Mono)
+└── js/
+    ├── configs.js   — Preset configurations and validation reference data
+    └── app.js       — All physics, rendering, and event logic
 ```
 
 ---
 
-## Usage
+## Running locally
 
-1. Open the deployed website
-2. Enter UAV parameters:
+Any static file server works:
 
-   * mass
-   * aerodynamic properties
-   * propulsion characteristics
-3. Define mission parameters:
-
-   * speeds
-   * distances
-   * loiter duration
-4. View:
-
-   * performance outputs
-   * mission feasibility
-   * energy breakdown
-
-All calculations are executed directly in the browser.
+```bash
+python3 -m http.server 8080
+# open http://localhost:8080
+```
 
 ---
 
-## Deployment
+## Deploying to GitHub Pages
 
-The application is hosted using GitHub Pages and runs entirely client-side.
+1. Push the repository to GitHub
+2. Go to **Settings → Pages → Source: Deploy from branch → main / (root)**
+3. The tool is live at `https://<username>.github.io/<repo>/`
 
-No installation, Python environment, or server infrastructure is required.
+No build step required.
 
 ---
 
-## Future Work
+## Extending the tool
 
-Potential extensions include:
+**Adding a preset** — add an entry to `PRESET_CONFIGS` in `js/configs.js`. All fields should be populated; set unused optional fields (e.g. `reserve_fraction` when `reserve_energy_wh` is set) to `null`.
 
-* integration of propeller performance data
-* wind and atmospheric variability modelling
-* optimisation routines for mission planning
-* coupling with higher-fidelity aerodynamic models
-* exportable reports and design summaries
+**Adding a trade parameter** — add an entry to `TRADE_PARAMETERS` in `js/app.js`. Each entry needs a `label`, `get`, `set`, and default range hints (`minFactor`/`maxFactor` or `minFixed`/`maxPad`).
+
+**Adding a 2D output metric** — add an entry to `TRADE2D_OUTPUT_METRICS` in `js/app.js` and ensure the key matches a field returned by `makeSummary()` or the mission profile result object.
 
 ---
 
 ## Author
 
 Thomas Bainbridge
-
-
----
