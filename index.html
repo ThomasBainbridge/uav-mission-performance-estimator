@@ -4,302 +4,307 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UAV Mission Performance Estimator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" />
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <header class="hero">
-    <div class="hero__inner shell">
-      <div>
-        <p class="eyebrow">Static GitHub Pages edition</p>
-        <h1>UAV Mission Performance Estimator</h1>
-        <p class="hero__copy">Fixed-wing preliminary performance and segmented mission analysis — browser-side calculations, no server required.</p>
+  <!-- ═══════════════════════════════════════════════════════════
+       TOP BAR
+  ═══════════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar__left">
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="brand">
+        <span class="brand__eyebrow">Fixed-wing · Browser-side</span>
+        <span class="brand__name">UAV Mission Performance Estimator</span>
       </div>
-      <div class="hero__actions">
-        <button id="copyLinkBtn"      class="btn btn--ghost">Copy share link</button>
-        <button id="downloadConfigBtn" class="btn btn--ghost">Download scenario</button>
-        <button id="exportSummaryBtn"  class="btn">Download summary CSV</button>
-      </div>
+    </div>
+    <div class="topbar__actions">
+      <button id="copyLinkBtn" class="tbtn tbtn--ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Share
+      </button>
+      <button id="downloadConfigBtn" class="tbtn tbtn--ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Scenario JSON
+      </button>
+      <button id="exportSummaryBtn" class="tbtn tbtn--primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Export CSV
+      </button>
     </div>
   </header>
 
-  <!-- ── Methodology collapsible ──────────────────────────────────── -->
-  <section class="methodology">
+  <!-- ═══════════════════════════════════════════════════════════
+       METHODOLOGY COLLAPSIBLE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="method-strip">
     <details>
-      <summary class="methodology__summary shell">
-        <span class="methodology__arrow"></span>
-        <span>Methodology &amp; model assumptions</span>
+      <summary class="method-summary">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Model equations &amp; assumptions
+        <svg class="method-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </summary>
-      <div class="methodology__body shell">
+      <div class="method-body">
         <div class="eq-grid">
-
-          <div class="eq-block">
-            <h3>Atmosphere — ISA troposphere (h ≤ 11 000 m)</h3>
-            <p>T(h) = 288.15 − 0.0065·h</p>
-            <p>ρ(h) = p₀·(T/T₀)^(g₀/RL) / (R·T)</p>
-            <p>R = 287.05 J/kg/K, g₀ = 9.80665 m/s²</p>
-            <p class="eq-note">An air-density override bypasses ISA and uses the entered ρ directly.</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Aerodynamics — parabolic drag polar</h3>
-            <p>CL = 2W / (ρV²S) — level flight (L = W)</p>
-            <p>CD = CD₀ + CL² / (π·e·AR)</p>
-            <p>D = ½ρV²S·CD</p>
-            <p class="eq-note">Compressibility not modelled. Lift constraint applies per-segment at each altitude.</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Power chain</h3>
-            <p>P_air = D·V</p>
-            <p>P_prop = P_air / η_total</p>
-            <p>P_total = P_prop + P_hotel + P_payload</p>
-            <p class="eq-note">Hotel and payload loads are constant; loiter payload load replaces cruise payload load during loiter segments.</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Energy budget</h3>
-            <p>E_nom = m_bat × SE</p>
-            <p>E_usable = E_nom × f_usable × f_Peukert</p>
-            <p>E_mission = E_usable − E_reserve</p>
-            <p>Endurance = E_mission / P_total</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Peukert correction</h3>
-            <p>f_Peukert = (E_nom / P_total)^(n − 1)</p>
-            <p class="eq-note">n = 1 → ideal (default). Typical Li-Po: n ≈ 1.02–1.08. Applied per speed-sweep point, so operating points shift slightly when n &gt; 1. Reference discharge is the 1-hour rate.</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Climb segment</h3>
-            <p>P_climb = P_level + m·g·Vc / η_total</p>
-            <p class="eq-note">Drag evaluated at cruise speed (small-angle approx, valid for γ &lt; ~10°). Climb speed is not independently optimised — set cruise speed to your intended climb speed for fidelity.</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Descent segment</h3>
-            <p>P_descent = f_descent × (P_air / η_total) + P_np</p>
-            <p class="eq-note">f_descent scales propulsive power relative to cruise. P_air anchored to cruise speed; descent rate only affects duration. Adjust f_descent to represent different throttle strategies.</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Wind model</h3>
-            <p>V_ground = max(0, V_air − V_wind)</p>
-            <p class="eq-note">Top-level KPIs use a single general wind speed (conservative one-leg headwind estimate). Segmented Mission profile uses separate per-leg wind speeds for accurate round-trip analysis. The asymmetric time penalty (slow outbound, fast return) is visible in the segment table.</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Operating point search</h3>
-            <p>Optimal speeds found by numerical search over 120-point V_stall → 40 m/s sweep.</p>
-            <p class="eq-note">Constrained to V ≥ 1.3·V_stall for operating-point selection. Sweep results are memoised per unique parameter set within each render call. Best wind-adjusted range maximises V_ground × endurance at the given leg wind.</p>
-          </div>
-
-          <div class="eq-block">
-            <h3>Payload drop</h3>
-            <p>If <em>Return payload mass</em> is set in the profile, aircraft mass is reduced from that value for all post-loiter segments (return &amp; descent). Weight, stall speed, drag and all derived quantities update accordingly.</p>
-            <p class="eq-note">Leave blank for a standard fixed-mass mission.</p>
-          </div>
-
+          <div class="eq-card"><h4>ISA Atmosphere</h4><code>T(h) = 288.15 − 0.0065·h</code><code>ρ = P₀·(T/T₀)^(g/RL) / (R·T)</code><p>Override bypasses ISA.</p></div>
+          <div class="eq-card"><h4>Drag Polar</h4><code>CL = 2W / (ρV²S)</code><code>CD = CD₀ + CL²/(π·e·AR)</code></div>
+          <div class="eq-card"><h4>Power Chain</h4><code>P_air = D·V</code><code>P_total = P_air/η + P_hotel + P_payload</code></div>
+          <div class="eq-card"><h4>Energy Budget</h4><code>E_nom = m_bat × SE</code><code>E_usable = E_nom · f_usable · f_Pk</code></div>
+          <div class="eq-card"><h4>Peukert</h4><code>f_Pk = (E_nom / P_total)^(n−1)</code><p>n = 1 → ideal. Ref = 1-hour discharge.</p></div>
+          <div class="eq-card"><h4>Climb / Descent</h4><code>P_climb = P_level + m·g·Vc/η</code><code>P_desc = f_d·(P_air/η) + P_np</code></div>
+          <div class="eq-card"><h4>Wind Model</h4><code>V_gs = max(0, V_air − V_wind)</code><p>Per-leg winds used in profile; single headwind for top-level KPIs.</p></div>
+          <div class="eq-card"><h4>Payload Drop</h4><p>Post-loiter segments use <em>return_payload_mass_kg</em> — all derived quantities update.</p></div>
+          <div class="eq-card"><h4>Stall Margin</h4><code>SM = V / V_stall ≥ 1.3</code><p>Segment table highlights warnings in amber.</p></div>
+          <div class="eq-card"><h4>Op. Point Search</h4><p>120-point numerical sweep, V_stall → 40 m/s. Memoised per unique parameter set.</p></div>
         </div>
       </div>
     </details>
-  </section>
+  </div>
 
-  <main class="shell app-grid">
+  <!-- ═══════════════════════════════════════════════════════════
+       APP LAYOUT
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="layout" id="appLayout">
 
-    <!-- ── Left: controls ───────────────────────────────────────── -->
-    <aside class="panel controls-panel">
+    <!-- Overlay for mobile sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-      <div class="panel__section">
-        <h2>Scenario</h2>
-        <label class="field">
-          <span>Preset</span>
-          <select id="presetSelect"></select>
-        </label>
-        <div class="button-row">
-          <button id="loadPresetBtn" class="btn btn--small">Load preset</button>
-          <button id="resetBtn"      class="btn btn--small btn--ghost">Reset edits</button>
+    <!-- ───────────────── SIDEBAR ──────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Preset -->
+      <div class="sb-block">
+        <p class="sb-block__label">Preset</p>
+        <select id="presetSelect" class="sb-select"></select>
+        <div class="sb-row">
+          <button id="loadPresetBtn" class="sb-btn sb-btn--accent">Load preset</button>
+          <button id="resetBtn" class="sb-btn sb-btn--ghost">Reset</button>
         </div>
       </div>
 
-      <div class="panel__section">
-        <h2>Saved scenarios</h2>
-        <label class="field">
-          <span>Name</span>
-          <input id="scenarioName" type="text" value="baseline_custom" />
-        </label>
-        <div class="button-row">
-          <button id="saveScenarioBtn"   class="btn btn--small">Save in browser</button>
-          <button id="deleteScenarioBtn" class="btn btn--small btn--danger">Delete selected</button>
+      <!-- Saved scenarios -->
+      <div class="sb-block">
+        <p class="sb-block__label">Saved scenarios</p>
+        <input id="scenarioName" type="text" class="sb-input" value="baseline_custom" placeholder="Name" />
+        <div class="sb-row">
+          <button id="saveScenarioBtn" class="sb-btn sb-btn--accent">Save</button>
+          <button id="deleteScenarioBtn" class="sb-btn sb-btn--danger">Delete</button>
         </div>
-        <label class="field">
-          <span>Saved</span>
-          <select id="savedScenarioSelect" size="5"></select>
-        </label>
-        <button id="loadSavedBtn" class="btn btn--small btn--ghost">Load saved scenario</button>
+        <select id="savedScenarioSelect" class="sb-select sb-select--multi" size="4"></select>
+        <button id="loadSavedBtn" class="sb-btn sb-btn--ghost sb-btn--full">Load selected</button>
       </div>
 
-      <div class="panel__section">
-        <h2>Aircraft</h2>
-        <div class="form-grid two-col" id="aircraftFields"></div>
-      </div>
+      <!-- Aircraft -->
+      <details class="sb-group" open>
+        <summary class="sb-group__summary">
+          <span class="sb-group__name">Aircraft</span>
+          <svg class="sb-group__chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="sb-fields form-grid" id="aircraftFields"></div>
+      </details>
 
-      <div class="panel__section">
-        <h2>Environment</h2>
-        <div class="form-grid two-col" id="environmentFields"></div>
-      </div>
+      <!-- Environment -->
+      <details class="sb-group">
+        <summary class="sb-group__summary">
+          <span class="sb-group__name">Environment</span>
+          <svg class="sb-group__chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="sb-fields form-grid" id="environmentFields"></div>
+      </details>
 
-      <div class="panel__section">
-        <h2>Mission</h2>
-        <div class="form-grid two-col" id="missionFields"></div>
-      </div>
+      <!-- Mission -->
+      <details class="sb-group">
+        <summary class="sb-group__summary">
+          <span class="sb-group__name">Mission</span>
+          <svg class="sb-group__chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="sb-fields form-grid" id="missionFields"></div>
+      </details>
 
-      <div class="panel__section">
-        <h2>Mission profile</h2>
-        <div class="form-grid two-col" id="profileFields"></div>
-      </div>
+      <!-- Profile -->
+      <details class="sb-group">
+        <summary class="sb-group__summary">
+          <span class="sb-group__name">Mission profile</span>
+          <svg class="sb-group__chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="sb-fields form-grid" id="profileFields"></div>
+      </details>
 
     </aside>
 
-    <!-- ── Right: results ───────────────────────────────────────── -->
-    <section class="content">
+    <!-- ───────────────── MAIN ─────────────────────────────────── -->
+    <main class="main">
 
-      <section class="metrics-grid" id="topMetrics"></section>
+      <!-- KPI strip -->
+      <div class="kpi-strip" id="topMetrics"></div>
 
-      <section class="tab-strip">
-        <button class="tab is-active" data-tab="performance">Performance</button>
-        <button class="tab" data-tab="operating">Operating points</button>
-        <button class="tab" data-tab="mission">Mission</button>
-        <button class="tab" data-tab="trade">Trade study</button>
-        <button class="tab" data-tab="trade2d">2D Trade</button>
-        <button class="tab" data-tab="compare">Scenario comparison</button>
-      </section>
+      <!-- Tab strip -->
+      <div class="tab-scroller">
+        <div class="tab-strip">
+          <button class="tab is-active" data-tab="performance">Performance</button>
+          <button class="tab" data-tab="operating">Operating pts</button>
+          <button class="tab" data-tab="mission">Mission</button>
+          <button class="tab" data-tab="trade">Trade study</button>
+          <button class="tab" data-tab="trade2d">2D Trade</button>
+          <button class="tab" data-tab="compare">Compare</button>
+        </div>
+      </div>
 
-      <!-- Performance tab -->
+      <!-- ── Performance ──────────────────────────────── -->
       <section class="tab-panel is-active" id="tab-performance">
-        <div class="panel">
-          <h2>Performance summary</h2>
+
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">Performance summary</h2>
+          </div>
           <div id="performanceCards" class="mini-metrics"></div>
           <div class="table-wrap"><table id="performanceSummaryTable"></table></div>
         </div>
-        <div class="panel">
-          <h2>Speed sweep</h2>
-          <div class="chart-grid">
-            <canvas id="powerChart"></canvas>
-            <canvas id="enduranceChart"></canvas>
-            <canvas id="rangeChart"></canvas>
+
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">Speed sweep</h2>
+            <button class="dl-btn" id="downloadSweepBtn">↓ CSV</button>
           </div>
-          <div class="table-actions">
-            <button class="btn btn--small" id="downloadSweepBtn">Download speed sweep CSV</button>
+          <div class="charts-grid charts-grid--3">
+            <div class="chart-cell"><canvas id="powerChart"></canvas></div>
+            <div class="chart-cell"><canvas id="enduranceChart"></canvas></div>
+            <div class="chart-cell"><canvas id="rangeChart"></canvas></div>
           </div>
           <div class="table-wrap"><table id="sweepTable"></table></div>
         </div>
+
       </section>
 
-      <!-- Operating points tab -->
+      <!-- ── Operating points ─────────────────────────── -->
       <section class="tab-panel" id="tab-operating">
-        <div class="panel">
-          <h2>Operating-point summary</h2>
-          <div class="table-actions">
-            <button class="btn btn--small" id="downloadOperatingBtn">Download operating points CSV</button>
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">Operating points</h2>
+            <button class="dl-btn" id="downloadOperatingBtn">↓ CSV</button>
           </div>
           <div class="table-wrap"><table id="operatingTable"></table></div>
         </div>
       </section>
 
-      <!-- Mission tab -->
+      <!-- ── Mission ──────────────────────────────────── -->
       <section class="tab-panel" id="tab-mission">
-        <div class="panel">
-          <h2>Mission feasibility</h2>
+
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">Mission feasibility</h2>
+          </div>
           <div id="missionMetrics" class="mini-metrics"></div>
           <div class="table-wrap"><table id="missionTotalsTable"></table></div>
         </div>
-        <div class="panel">
-          <h2>Segment results</h2>
-          <div class="chart-grid">
-            <canvas id="segmentEnergyChart"></canvas>
-            <canvas id="remainingEnergyChart"></canvas>
+
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">Segment results</h2>
+            <button class="dl-btn" id="downloadMissionBtn">↓ CSV</button>
           </div>
-          <div class="table-actions">
-            <button class="btn btn--small" id="downloadMissionBtn">Download mission segments CSV</button>
+          <div class="charts-grid charts-grid--2">
+            <div class="chart-cell"><canvas id="segmentEnergyChart"></canvas></div>
+            <div class="chart-cell"><canvas id="remainingEnergyChart"></canvas></div>
           </div>
           <div class="table-wrap"><table id="missionSegmentsTable"></table></div>
         </div>
+
       </section>
 
-      <!-- 1D Trade tab -->
+      <!-- ── 1D Trade ──────────────────────────────────── -->
       <section class="tab-panel" id="tab-trade">
-        <div class="panel">
-          <h2>Trade study</h2>
-          <div class="trade-controls">
-            <label class="field"><span>Parameter</span><select id="tradeParameter"></select></label>
-            <label class="field"><span>Minimum</span><input id="tradeMin" type="number" step="any"></label>
-            <label class="field"><span>Maximum</span><input id="tradeMax" type="number" step="any"></label>
-            <label class="field"><span>Points</span><input id="tradePoints" type="number" min="3" max="100" value="15"></label>
-            <div class="field field--button"><span>&nbsp;</span><button id="runTradeBtn" class="btn">Run trade study</button></div>
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">Trade study</h2>
           </div>
-          <div class="chart-grid">
-            <canvas id="tradeRangeChart"></canvas>
-            <canvas id="tradeMissionChart"></canvas>
+          <div class="ctrl-bar">
+            <label class="ctrl-field">
+              <span>Parameter</span>
+              <select id="tradeParameter"></select>
+            </label>
+            <label class="ctrl-field">
+              <span>Min</span>
+              <input id="tradeMin" type="number" step="any" />
+            </label>
+            <label class="ctrl-field">
+              <span>Max</span>
+              <input id="tradeMax" type="number" step="any" />
+            </label>
+            <label class="ctrl-field ctrl-field--narrow">
+              <span>Points</span>
+              <input id="tradePoints" type="number" min="3" max="100" value="15" />
+            </label>
+            <button id="runTradeBtn" class="run-btn">Run</button>
           </div>
-          <div class="table-actions">
-            <button class="btn btn--small" id="downloadTradeBtn">Download trade study CSV</button>
+          <div class="charts-grid charts-grid--2">
+            <div class="chart-cell"><canvas id="tradeRangeChart"></canvas></div>
+            <div class="chart-cell"><canvas id="tradeMissionChart"></canvas></div>
+          </div>
+          <div class="card__foot">
+            <button class="dl-btn" id="downloadTradeBtn">↓ CSV</button>
           </div>
           <div class="table-wrap"><table id="tradeTable"></table></div>
         </div>
       </section>
 
-      <!-- 2D Trade tab -->
+      <!-- ── 2D Trade ──────────────────────────────────── -->
       <section class="tab-panel" id="tab-trade2d">
-        <div class="panel">
-          <h2>2D Trade study</h2>
-          <p class="muted">Sweep two parameters simultaneously and colour-map a performance metric.</p>
-          <div class="trade2d-controls">
-            <label class="field"><span>X axis parameter</span><select id="trade2dXParam"></select></label>
-            <label class="field"><span>X min</span><input id="trade2dXMin" type="number" step="any"></label>
-            <label class="field"><span>X max</span><input id="trade2dXMax" type="number" step="any"></label>
-            <label class="field"><span>Y axis parameter</span><select id="trade2dYParam"></select></label>
-            <label class="field"><span>Y min</span><input id="trade2dYMin" type="number" step="any"></label>
-            <label class="field"><span>Y max</span><input id="trade2dYMax" type="number" step="any"></label>
-            <label class="field"><span>Output metric</span><select id="trade2dMetric"></select></label>
-            <label class="field"><span>Grid points (each axis)</span><input id="trade2dGrid" type="number" min="5" max="35" value="18"></label>
-            <div class="field field--button"><span>&nbsp;</span><button id="runTrade2dBtn" class="btn">Run 2D trade</button></div>
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">2D Trade study</h2>
+            <p class="card__sub">Sweep two parameters simultaneously — output colour-mapped below.</p>
+          </div>
+          <div class="ctrl-bar ctrl-bar--wrap">
+            <label class="ctrl-field"><span>X parameter</span><select id="trade2dXParam"></select></label>
+            <label class="ctrl-field ctrl-field--narrow"><span>X min</span><input id="trade2dXMin" type="number" step="any" /></label>
+            <label class="ctrl-field ctrl-field--narrow"><span>X max</span><input id="trade2dXMax" type="number" step="any" /></label>
+            <label class="ctrl-field"><span>Y parameter</span><select id="trade2dYParam"></select></label>
+            <label class="ctrl-field ctrl-field--narrow"><span>Y min</span><input id="trade2dYMin" type="number" step="any" /></label>
+            <label class="ctrl-field ctrl-field--narrow"><span>Y max</span><input id="trade2dYMax" type="number" step="any" /></label>
+            <label class="ctrl-field"><span>Output metric</span><select id="trade2dMetric"></select></label>
+            <label class="ctrl-field ctrl-field--narrow"><span>Grid N</span><input id="trade2dGrid" type="number" min="5" max="35" value="18" /></label>
+            <button id="runTrade2dBtn" class="run-btn">Run</button>
           </div>
           <div class="heatmap-wrap">
             <canvas id="trade2dCanvas"></canvas>
           </div>
-          <div class="table-actions" style="margin-top:0.75rem">
-            <button class="btn btn--small btn--ghost" id="downloadTrade2dBtn">Download 2D trade CSV</button>
+          <div class="card__foot">
+            <button class="dl-btn" id="downloadTrade2dBtn">↓ CSV</button>
           </div>
         </div>
       </section>
 
-      <!-- Scenario comparison tab -->
+      <!-- ── Compare ───────────────────────────────────── -->
       <section class="tab-panel" id="tab-compare">
-        <div class="panel">
-          <h2>Scenario comparison</h2>
-          <p class="muted">Compare any saved browser scenarios.</p>
-          <label class="field">
-            <span>Choose scenarios</span>
-            <select id="compareScenarios" multiple size="6"></select>
-          </label>
-          <div class="chart-grid">
-            <canvas id="scenarioEnergyChart"></canvas>
-            <canvas id="scenarioTimeChart"></canvas>
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">Scenario comparison</h2>
+            <p class="card__sub">Ctrl/Cmd + click to select multiple.</p>
           </div>
-          <div class="table-actions">
-            <button class="btn btn--small" id="downloadCompareBtn">Download comparison CSV</button>
+          <select id="compareScenarios" class="compare-list" multiple size="5"></select>
+          <div class="charts-grid charts-grid--2">
+            <div class="chart-cell"><canvas id="scenarioEnergyChart"></canvas></div>
+            <div class="chart-cell"><canvas id="scenarioTimeChart"></canvas></div>
+          </div>
+          <div class="card__foot">
+            <button class="dl-btn" id="downloadCompareBtn">↓ CSV</button>
           </div>
           <div class="table-wrap"><table id="compareTable"></table></div>
         </div>
       </section>
 
-    </section><!-- /.content -->
-  </main>
+    </main>
+  </div>
 
-  <!-- Metric card template -->
+  <!-- ── Metric card template ──── -->
   <template id="metricCardTemplate">
     <article class="metric-card">
       <span class="metric-card__label"></span>
@@ -307,10 +312,25 @@
     </article>
   </template>
 
-  <!-- Share link toast -->
-  <div id="shareToast" class="toast">Link copied to clipboard</div>
+  <!-- ── Toast ──────────────────── -->
+  <div id="shareToast" class="toast">Link copied</div>
 
   <script src="js/configs.js"></script>
   <script src="js/app.js"></script>
+
+  <script>
+    // Sidebar toggle (mobile)
+    const _tog = document.getElementById('sidebarToggle');
+    const _lay = document.getElementById('appLayout');
+    const _ov  = document.getElementById('sidebarOverlay');
+    _tog.addEventListener('click', () => {
+      const open = _lay.classList.toggle('sidebar--open');
+      _tog.setAttribute('aria-expanded', open);
+    });
+    _ov.addEventListener('click', () => {
+      _lay.classList.remove('sidebar--open');
+      _tog.setAttribute('aria-expanded', 'false');
+    });
+  </script>
 </body>
 </html>
